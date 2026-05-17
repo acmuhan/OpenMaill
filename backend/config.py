@@ -12,9 +12,8 @@ except ImportError:
 class Config:
     SECRET_KEY = os.getenv("APP_SECRET_KEY", "dev-only-change-me")
 
-    # 默认账号源（前端通过 window.APP_DEFAULTS 读取）
+    # 默认账号源（前端通过 window.APP_DEFAULTS 读取；只暴露非敏感字段）
     DEFAULT_API_BASE_URL = os.getenv("DEFAULT_API_BASE_URL", "").strip().rstrip("/")
-    DEFAULT_API_KEY = os.getenv("DEFAULT_API_KEY", "").strip()
 
     # 请求超时（秒）
     HTTP_TIMEOUT = int(os.getenv("OPENMAIL_HTTP_TIMEOUT", "30"))
@@ -24,8 +23,7 @@ class Config:
 
     @classmethod
     def public_defaults(cls):
-        """返回可以暴露给前端的默认值。"""
+        """返回可以暴露给前端的非敏感默认值。"""
         return {
             "base_url": cls.DEFAULT_API_BASE_URL,
-            "key": cls.DEFAULT_API_KEY,
         }

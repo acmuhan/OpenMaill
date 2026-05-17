@@ -32,11 +32,10 @@ function migrateLegacy(): ToolInstance[] {
   }))
 }
 
-function readDefaultsFromHost(): Partial<{ base_url: string; key: string }> {
-  const def = (window as unknown as { APP_DEFAULTS?: { base_url?: string; key?: string } }).APP_DEFAULTS
+function readDefaultsFromHost(): Partial<{ base_url: string }> {
+  const def = (window as unknown as { APP_DEFAULTS?: { base_url?: string } }).APP_DEFAULTS
   return {
     base_url: def?.base_url || 'https://www.zhanghaoya.com',
-    key: def?.key || '',
   }
 }
 
@@ -79,7 +78,7 @@ function bootstrap(): ToolInstance[] {
       name: '账号鸭协议',
       config: {
         base_url: (d.base_url || 'https://www.zhanghaoya.com').replace(/\/+$/, ''),
-        key: d.key || '',
+        key: '',
       },
       enabled: true,
     },

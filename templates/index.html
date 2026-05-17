@@ -381,7 +381,7 @@
       </div>
       <div class="field">
         <label for="cfg-key">API Key</label>
-        <input id="cfg-key" class="key" type="text" placeholder="在 .env 中配置" value="{{ defaults.key|e }}">
+        <input id="cfg-key" class="key" type="text" placeholder="在浏览器中填写，仅保存在本机" value="">
       </div>
     </div>
 
@@ -520,7 +520,6 @@ function cfg() {
 function syncDefaults(silent = false) {
   const defaults = window.APP_DEFAULTS || {};
   if (defaults.base_url) document.getElementById('cfg-url').value = defaults.base_url;
-  if (defaults.key) document.getElementById('cfg-key').value = defaults.key;
   if (!silent) showToast('已同步默认配置');
 }
 

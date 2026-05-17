@@ -16,6 +16,7 @@ class MailService:
         limit = int(body.get("limit", 20))
         if limit < 1:
             raise ValidationError("邮件数量必须大于 0")
+        limit = min(limit, 100)
         return tool.emails(
             dict(body),
             access_token=body["access_token"],

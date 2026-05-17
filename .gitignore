@@ -3,6 +3,7 @@
 .env.local
 .env.*.local
 hotmail_oauth2_demo.py
+.backup_before_openmail_fix/
 
 # Python
 __pycache__/

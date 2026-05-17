@@ -33,9 +33,10 @@
 | --- | --- | --- |
 | `APP_SECRET_KEY` | `dev-only-change-me` | Flask session secret，生产环境必须改成随机长字符串。 |
 | `DEFAULT_API_BASE_URL` | 空 | 默认账号 API 服务地址，会暴露给前端作为默认值。 |
-| `DEFAULT_API_KEY` | 空 | 默认账号 API key，会暴露给前端作为默认值；生产环境谨慎使用。 |
 | `OPENMAIL_HTTP_TIMEOUT` | `30` | 后端请求外部 API 的超时时间，单位秒。 |
 | `FLASK_DEBUG` | `1` | Flask 调试开关；生产环境应设为 `0`。 |
+| `HOST` | `127.0.0.1` | 本地开发服务器监听地址，仅 `python app.py` 使用。 |
+| `PORT` | `5000` | 本地开发服务器监听端口，仅 `python app.py` 使用。 |
 
 可以复制 `.env.example` 为 `.env` 后本地填写：
 
@@ -135,6 +136,6 @@ Compose 默认把容器 `5000` 端口映射到主机 `5000` 端口。
 
 - 生产环境必须设置强随机 `APP_SECRET_KEY`，并设置 `FLASK_DEBUG=0`。
 - 不要提交 `.env`、真实 API key、refresh token、access token、邮箱密码或账号样例。
-- `DEFAULT_API_KEY` 会作为前端默认配置下发到浏览器；如不希望暴露，留空并让用户在界面中输入。
+- API Key 仅由用户在浏览器中填写并保存到 localStorage，后端不提供、不持久化，也不会通过环境变量下发。
 - 外部账号 API、Microsoft OAuth2 和 Graph 调用都依赖真实网络和凭据，测试时建议使用隔离账号或 mock 请求。
 - Docker 构建上下文通过 `.dockerignore` 排除了 `.env`、`node_modules`、`output`、缓存和日志，避免敏感信息或无关产物进入镜像。
