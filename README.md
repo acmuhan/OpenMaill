@@ -90,8 +90,6 @@ Vite 开发服务器默认使用 `5173` 端口，并把 `/api` 代理到 `http:/
 - `tag v*.*.*` 会同时打版本标签
 - 镜像名：`ghcr.io/<owner>/openmaill`
 
-如果你想改成 Docker Hub，我也可以再给你换一版。
-
 ## Docker 部署
 
 构建镜像：
