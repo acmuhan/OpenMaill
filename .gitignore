@@ -1,0 +1,29 @@
+# Local secrets
+.env
+.env.local
+.env.*.local
+hotmail_oauth2_demo.py
+
+# Python
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.venv/
+venv/
+
+# Node / Vue
+frontend/node_modules/
+node_modules/
+*.tsbuildinfo
+frontend/.vite/
+frontend/dist/
+
+# Local generated output
+output/
+
+# Logs and OS files
+*.log
+.DS_Store
+Thumbs.db

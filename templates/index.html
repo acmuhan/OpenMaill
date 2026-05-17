@@ -1,0 +1,746 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Hotmail 自动化管理</title>
+<style>
+  :root {
+    --bg: #eef2f6;
+    --panel: rgba(255, 255, 255, 0.82);
+    --panel-strong: #ffffff;
+    --text: #132033;
+    --muted: #617087;
+    --line: rgba(19, 32, 51, 0.12);
+    --line-strong: rgba(19, 32, 51, 0.18);
+    --accent: #0c7c8c;
+    --accent-2: #b95f2d;
+    --accent-3: #8e4b72;
+    --good: #12754c;
+    --warn: #b85f00;
+    --bad: #b93d3d;
+    --shadow: 0 18px 50px rgba(23, 34, 53, 0.08);
+    --radius: 8px;
+  }
+
+  * { box-sizing: border-box; }
+  html, body { margin: 0; min-height: 100%; }
+  body {
+    font-family: "Aptos", "Segoe UI", sans-serif;
+    color: var(--text);
+    background:
+      radial-gradient(circle at top left, rgba(12, 124, 140, 0.16), transparent 30%),
+      radial-gradient(circle at top right, rgba(185, 95, 45, 0.13), transparent 26%),
+      linear-gradient(180deg, #f8fafc 0%, #edf2f7 100%);
+  }
+
+  .shell {
+    max-width: 1440px;
+    margin: 0 auto;
+    padding: 22px;
+  }
+
+  .topbar {
+    display: grid;
+    grid-template-columns: 1.5fr 1fr auto;
+    gap: 14px;
+    align-items: stretch;
+    padding: 16px;
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    background: rgba(255, 255, 255, 0.74);
+    backdrop-filter: blur(12px);
+    box-shadow: var(--shadow);
+  }
+
+  .brand {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    min-width: 0;
+  }
+
+  .brand h1 {
+    margin: 0;
+    font: 700 20px/1.1 "Bahnschrift", "Segoe UI", sans-serif;
+    letter-spacing: 0;
+  }
+
+  .brand p {
+    margin: 0;
+    color: var(--muted);
+    font-size: 12px;
+    line-height: 1.5;
+  }
+
+  .status-strip {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    align-items: center;
+  }
+
+  .chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 12px;
+    border-radius: 999px;
+    border: 1px solid var(--line);
+    background: rgba(255, 255, 255, 0.9);
+    font-size: 12px;
+    color: var(--muted);
+    white-space: nowrap;
+  }
+
+  .chip strong { color: var(--text); font-weight: 600; }
+
+  .cfg {
+    display: grid;
+    grid-template-columns: 1.3fr 1fr;
+    gap: 10px;
+    min-width: 0;
+  }
+
+  .field {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    min-width: 0;
+  }
+
+  .field label {
+    font-size: 11px;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+  }
+
+  input, select, textarea, button {
+    font: inherit;
+  }
+
+  input, select, textarea {
+    width: 100%;
+    border: 1px solid var(--line-strong);
+    background: rgba(255, 255, 255, 0.95);
+    color: var(--text);
+    border-radius: 7px;
+    padding: 10px 12px;
+    outline: none;
+    transition: border-color 0.15s, box-shadow 0.15s, transform 0.15s;
+  }
+
+  textarea {
+    min-height: 92px;
+    resize: vertical;
+    font-family: "Consolas", "Cascadia Mono", monospace;
+    font-size: 12px;
+  }
+
+  input:focus, select:focus, textarea:focus {
+    border-color: rgba(12, 124, 140, 0.6);
+    box-shadow: 0 0 0 3px rgba(12, 124, 140, 0.12);
+  }
+
+  .key {
+    font-family: "Consolas", "Cascadia Mono", monospace;
+    letter-spacing: 0;
+  }
+
+  .main {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+    margin-top: 16px;
+  }
+
+  .panel {
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    background: var(--panel);
+    backdrop-filter: blur(12px);
+    box-shadow: var(--shadow);
+    overflow: hidden;
+    min-width: 0;
+  }
+
+  .panel-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 14px 16px;
+    border-bottom: 1px solid var(--line);
+    background: linear-gradient(180deg, rgba(255,255,255,0.9), rgba(255,255,255,0.7));
+  }
+
+  .panel-header h2 {
+    margin: 0;
+    font: 700 13px/1.2 "Bahnschrift", "Segoe UI", sans-serif;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+  }
+
+  .panel-body {
+    padding: 16px;
+  }
+
+  .stack {
+    display: grid;
+    gap: 12px;
+  }
+
+  .row {
+    display: grid;
+    gap: 12px;
+  }
+
+  .row.cols-2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .row.cols-3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+
+  .actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    align-items: center;
+  }
+
+  button {
+    border: 1px solid transparent;
+    border-radius: 7px;
+    padding: 10px 14px;
+    cursor: pointer;
+    transition: transform 0.15s, background 0.15s, border-color 0.15s, opacity 0.15s;
+    color: #fff;
+    background: var(--accent);
+    font-weight: 600;
+  }
+
+  button:hover { transform: translateY(-1px); }
+  button:active { transform: translateY(0); }
+
+  .btn-secondary { background: #5a6879; }
+  .btn-success { background: var(--good); }
+  .btn-warning { background: var(--accent-2); }
+  .btn-ghost {
+    background: rgba(255,255,255,0.9);
+    color: var(--text);
+    border-color: var(--line-strong);
+  }
+
+  .btn-sm {
+    padding: 7px 10px;
+    font-size: 12px;
+  }
+
+  .metric {
+    display: grid;
+    gap: 4px;
+    padding: 12px 14px;
+    border-radius: 8px;
+    border: 1px solid var(--line);
+    background: rgba(255,255,255,0.78);
+  }
+
+  .metric span {
+    font-size: 11px;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+  }
+
+  .metric strong {
+    font-size: 16px;
+    line-height: 1.2;
+    color: var(--text);
+  }
+
+  .result-box, .list-box, .detail-box {
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    background: rgba(248, 250, 252, 0.95);
+    color: var(--text);
+    min-height: 88px;
+  }
+
+  .result-box, .detail-box {
+    padding: 14px;
+    white-space: pre-wrap;
+    word-break: break-word;
+    font-family: "Consolas", "Cascadia Mono", monospace;
+    font-size: 12px;
+    line-height: 1.65;
+  }
+
+  .result-box.is-error, .detail-box.is-error {
+    color: var(--bad);
+    background: rgba(255, 242, 242, 0.95);
+  }
+
+  .result-box.is-muted, .detail-box.is-muted {
+    color: var(--muted);
+  }
+
+  .list-box {
+    overflow: auto;
+    max-height: 330px;
+    padding: 0;
+    list-style: none;
+  }
+
+  .list-item {
+    padding: 12px 14px;
+    border-bottom: 1px solid var(--line);
+    background: rgba(255,255,255,0.55);
+  }
+
+  .list-item:last-child { border-bottom: 0; }
+
+  .list-item:hover { background: rgba(12, 124, 140, 0.05); }
+
+  .item-title {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text);
+    margin-bottom: 4px;
+  }
+
+  .item-meta {
+    font-size: 11px;
+    color: var(--muted);
+    font-family: "Consolas", "Cascadia Mono", monospace;
+    line-height: 1.5;
+    word-break: break-word;
+  }
+
+  .item-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 10px;
+  }
+
+  .subtle {
+    color: var(--muted);
+    font-size: 12px;
+  }
+
+  .divider {
+    height: 1px;
+    margin: 14px 0;
+    background: var(--line);
+    border: 0;
+  }
+
+  .toast {
+    position: fixed;
+    right: 20px;
+    bottom: 20px;
+    padding: 12px 14px;
+    border-radius: 8px;
+    border: 1px solid var(--line);
+    background: rgba(19, 32, 51, 0.95);
+    color: #fff;
+    font-size: 13px;
+    opacity: 0;
+    transform: translateY(8px);
+    transition: opacity 0.2s, transform 0.2s;
+    pointer-events: none;
+    z-index: 99;
+  }
+
+  .toast.show {
+    opacity: 1;
+    transform: translateY(0);
+  }
+
+  @media (max-width: 1080px) {
+    .topbar, .main { grid-template-columns: 1fr; }
+    .cfg, .row.cols-2, .row.cols-3 { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+<div class="shell">
+  <div class="topbar">
+    <div class="brand">
+      <h1>Hotmail 自动化管理</h1>
+      <p>账号获取、余额查询、历史记录和 OAuth2 邮件读取集中在一个界面里。</p>
+      <div class="status-strip">
+        <div class="chip">余额 <strong id="balance-val">--</strong></div>
+        <div class="chip">Token <strong id="token-state">未就绪</strong></div>
+        <div class="chip">邮件 <strong id="mail-state">--</strong></div>
+      </div>
+    </div>
+
+    <div class="cfg">
+      <div class="field">
+        <label for="cfg-url">API 服务器地址</label>
+        <input id="cfg-url" type="text" placeholder="https://example.com" value="{{ defaults.base_url|e }}">
+      </div>
+      <div class="field">
+        <label for="cfg-key">API Key</label>
+        <input id="cfg-key" class="key" type="text" placeholder="在 .env 中配置" value="{{ defaults.key|e }}">
+      </div>
+    </div>
+
+    <div class="actions" style="align-self:end; justify-content:flex-end;">
+      <button class="btn-ghost" onclick="loadBalance()">刷新余额</button>
+      <button class="btn-secondary" onclick="syncDefaults()">同步默认值</button>
+    </div>
+  </div>
+
+  <div class="main">
+    <section class="panel">
+      <div class="panel-header">
+        <h2>账号与历史</h2>
+        <div class="subtle">接入外部账号服务</div>
+      </div>
+      <div class="panel-body">
+        <div class="row cols-2">
+          <div class="field">
+            <label for="acc-type">账号类型</label>
+            <select id="acc-type">
+              <option value="hotmail">hotmail</option>
+              <option value="outlook">outlook</option>
+              <option value="hotmail_outlook">hotmail_outlook</option>
+            </select>
+          </div>
+          <div class="field">
+            <label for="acc-qty">数量</label>
+            <input type="number" id="acc-qty" value="1" min="1" max="50">
+          </div>
+        </div>
+        <div class="actions" style="margin-top:12px;">
+          <button onclick="fetchAccounts()">获取账号</button>
+          <button class="btn-ghost" onclick="loadHistory()">查询历史</button>
+        </div>
+        <div id="acc-result" class="result-box is-muted" style="margin-top:12px;">等待获取...</div>
+
+        <hr class="divider">
+
+        <div class="row cols-2">
+          <div class="field">
+            <label for="hist-type">历史类型</label>
+            <select id="hist-type">
+              <option value="hotmail">hotmail</option>
+              <option value="outlook">outlook</option>
+              <option value="hotmail_outlook">hotmail_outlook</option>
+            </select>
+          </div>
+          <div class="field">
+            <label>&nbsp;</label>
+            <button class="btn-ghost" onclick="loadHistory()">刷新历史</button>
+          </div>
+        </div>
+        <ul id="hist-list" class="list-box" style="margin-top:12px;">
+          <li class="list-item">
+            <div class="item-title">等待查询...</div>
+            <div class="item-meta">历史记录会显示在这里。</div>
+          </li>
+        </ul>
+      </div>
+    </section>
+
+    <section class="panel">
+      <div class="panel-header">
+        <h2>OAuth2 邮件</h2>
+        <div class="subtle">Microsoft Graph</div>
+      </div>
+      <div class="panel-body">
+        <div class="stack">
+          <div class="field">
+            <label for="mail-email">邮箱地址</label>
+            <input type="text" id="mail-email" placeholder="user@hotmail.com">
+          </div>
+          <div class="field">
+            <label for="mail-clientid">Client ID</label>
+            <input type="text" id="mail-clientid" class="key" placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx">
+          </div>
+          <div class="field">
+            <label for="mail-refresh">Refresh Token</label>
+            <textarea id="mail-refresh" class="key" placeholder="M.C525_BAY.0.U.-..."></textarea>
+          </div>
+          <div class="actions">
+            <button onclick="getToken()">获取 Access Token</button>
+            <button class="btn-success" onclick="listEmails()">读取邮件</button>
+            <button class="btn-warning" onclick="quickTokenAndMailFromForm()">Token + 读邮件</button>
+          </div>
+          <div id="token-result" class="result-box is-muted">等待获取 Token...</div>
+
+          <div class="row cols-2">
+            <div class="field">
+              <label for="mail-folder">文件夹</label>
+              <input type="text" id="mail-folder" value="INBOX">
+            </div>
+            <div class="field">
+              <label for="mail-limit">数量</label>
+              <input type="number" id="mail-limit" value="20" min="1" max="100">
+            </div>
+          </div>
+
+          <ul id="email-list" class="list-box">
+            <li class="list-item">
+              <div class="item-title">等待读取...</div>
+              <div class="item-meta">邮件列表会显示在这里。</div>
+            </li>
+          </ul>
+        </div>
+      </div>
+    </section>
+
+    <section class="panel" style="grid-column: 1 / -1;">
+      <div class="panel-header">
+        <h2>邮件正文</h2>
+        <div class="subtle">点击邮件列表中的任意一封</div>
+      </div>
+      <div class="panel-body">
+        <div id="email-detail" class="detail-box is-muted">点击上方邮件列表中的邮件查看正文</div>
+      </div>
+    </section>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+window.APP_DEFAULTS = {{ defaults | tojson }};
+
+let currentAccessToken = '';
+let currentEmail = '';
+
+function cfg() {
+  return {
+    base_url: document.getElementById('cfg-url').value.trim(),
+    key: document.getElementById('cfg-key').value.trim()
+  };
+}
+
+function syncDefaults(silent = false) {
+  const defaults = window.APP_DEFAULTS || {};
+  if (defaults.base_url) document.getElementById('cfg-url').value = defaults.base_url;
+  if (defaults.key) document.getElementById('cfg-key').value = defaults.key;
+  if (!silent) showToast('已同步默认配置');
+}
+
+async function post(url, body) {
+  const r = await fetch(url, {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify(body)
+  });
+  return r.json();
+}
+
+function setBox(id, text, mode) {
+  const el = document.getElementById(id);
+  el.textContent = text;
+  el.className = 'result-box';
+  if (id === 'email-detail') el.className = 'detail-box';
+  if (mode === 'error') el.classList.add('is-error');
+  if (mode === 'muted') el.classList.add('is-muted');
+}
+
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  clearTimeout(window.__toastTimer);
+  window.__toastTimer = setTimeout(() => t.classList.remove('show'), 1800);
+}
+
+function escHtml(s) {
+  return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+function updateStatePill(id, value) {
+  document.getElementById(id).textContent = value;
+}
+
+async function loadBalance() {
+  updateStatePill('balance-val', '...');
+  const d = await post('/api/balance', cfg());
+  updateStatePill('balance-val', d.ok ? d.balance : '错误');
+  if (!d.ok) showToast(d.error);
+}
+
+async function fetchAccounts() {
+  setBox('acc-result', '获取中...', 'muted');
+  const d = await post('/api/accounts', {
+    ...cfg(),
+    type: document.getElementById('acc-type').value,
+    quantity: document.getElementById('acc-qty').value
+  });
+  if (d.ok) {
+    setBox(
+      'acc-result',
+      d.accounts.map(a => `${a.email}  :  ${a.password}`).join('\n') || '(无数据)',
+      'muted'
+    );
+    showToast('账号已返回');
+  } else {
+    setBox('acc-result', '错误: ' + d.error, 'error');
+  }
+}
+
+function parseHistoryLine(line) {
+  let parts = line.split('----');
+  if (parts.length < 4) {
+    parts = line.split(':');
+    if (parts.length < 4) return null;
+    parts = [parts[0], parts[1], parts[2], parts.slice(3).join(':')];
+  }
+  return {
+    email: parts[0].trim(),
+    password: parts[1].trim(),
+    client_id: parts[2].trim(),
+    refresh_token: parts[3].trim(),
+    access_token: parts[4] ? parts[4].trim() : ''
+  };
+}
+
+function fillOAuth(acc) {
+  document.getElementById('mail-email').value = acc.email;
+  document.getElementById('mail-clientid').value = acc.client_id;
+  document.getElementById('mail-refresh').value = acc.refresh_token;
+  showToast('已填入面板');
+}
+
+async function quickToken(acc) {
+  fillOAuth(acc);
+  await getToken();
+}
+
+async function quickTokenAndMail(acc) {
+  fillOAuth(acc);
+  await getToken();
+  if (currentAccessToken) await listEmails();
+}
+
+async function loadHistory() {
+  const listEl = document.getElementById('hist-list');
+  listEl.innerHTML = '<li class="list-item"><div class="item-title">查询中...</div><div class="item-meta">正在拉取历史记录。</div></li>';
+
+  const d = await post('/api/history', {
+    ...cfg(),
+    type: document.getElementById('hist-type').value
+  });
+
+  if (!d.ok) {
+    listEl.innerHTML = `<li class="list-item"><div class="item-title">错误</div><div class="item-meta">${escHtml(d.error)}</div></li>`;
+    return;
+  }
+
+  const raw = d.data || '';
+  const lines = raw
+    .split(/\r?\n|<br>/)
+    .map(l => l.trim())
+    .filter(l => l.includes('@') && (l.includes('----') || l.includes(':')));
+
+  if (!lines.length) {
+    listEl.innerHTML = '<li class="list-item"><div class="item-title">(无记录)</div><div class="item-meta">当前类型没有可显示的历史记录。</div></li>';
+    return;
+  }
+
+  listEl.innerHTML = lines.map((line) => {
+    const acc = parseHistoryLine(line);
+    if (!acc) {
+      return `<li class="list-item"><div class="item-title">无法解析</div><div class="item-meta">${escHtml(line)}</div></li>`;
+    }
+
+    const safeAcc = JSON.stringify(acc).replace(/'/g, '&#39;');
+    return `
+      <li class="list-item">
+        <div class="item-title">${escHtml(acc.email)}</div>
+        <div class="item-meta">ClientID: ${escHtml(acc.client_id)}<br>Refresh: ${escHtml(acc.refresh_token.substring(0, 40))}...</div>
+        <div class="item-actions">
+          <button class="btn-sm btn-ghost" onclick='fillOAuth(${safeAcc})'>填入面板</button>
+          <button class="btn-sm btn-success" onclick='quickToken(${safeAcc})'>获取 Token</button>
+          <button class="btn-sm btn-warning" onclick='quickTokenAndMail(${safeAcc})'>Token + 读邮件</button>
+        </div>
+      </li>`;
+  }).join('');
+}
+
+async function getToken() {
+  setBox('token-result', '获取中...', 'muted');
+  const d = await post('/api/token', {
+    refresh_token: document.getElementById('mail-refresh').value.trim(),
+    client_id: document.getElementById('mail-clientid').value.trim()
+  });
+
+  if (d.ok) {
+    currentAccessToken = d.access_token;
+    currentEmail = document.getElementById('mail-email').value.trim();
+    setBox('token-result', 'Access Token 获取成功\n' + d.access_token.substring(0, 60) + '...', 'muted');
+    updateStatePill('token-state', '已就绪');
+    updateStatePill('mail-state', currentEmail || '--');
+    showToast('Token 已更新');
+  } else {
+    currentAccessToken = '';
+    updateStatePill('token-state', '失败');
+    setBox('token-result', '错误: ' + d.error, 'error');
+  }
+}
+
+async function listEmails() {
+  const listEl = document.getElementById('email-list');
+  listEl.innerHTML = '<li class="list-item"><div class="item-title">加载中...</div><div class="item-meta">正在读取邮件列表。</div></li>';
+
+  const d = await post('/api/emails', {
+    email: currentEmail || document.getElementById('mail-email').value.trim(),
+    access_token: currentAccessToken,
+    folder: document.getElementById('mail-folder').value,
+    limit: document.getElementById('mail-limit').value
+  });
+
+  if (!d.ok) {
+    listEl.innerHTML = `<li class="list-item"><div class="item-title">错误</div><div class="item-meta">${escHtml(d.error)}</div></li>`;
+    return;
+  }
+
+  updateStatePill('mail-state', d.emails.length ? `${d.emails.length} 封` : '空');
+
+  if (!d.emails.length) {
+    listEl.innerHTML = '<li class="list-item"><div class="item-title">收件箱为空</div><div class="item-meta">没有可显示的邮件。</div></li>';
+    return;
+  }
+
+  listEl.innerHTML = d.emails.map(m => `
+    <li class="list-item" onclick="viewEmail(${JSON.stringify(m.id)})">
+      <div class="item-title">${escHtml(m.subject)}</div>
+      <div class="item-meta">${escHtml(m.from)} &nbsp;·&nbsp; ${escHtml(m.date)}</div>
+    </li>`).join('');
+  showToast('邮件列表已刷新');
+}
+
+async function quickTokenAndMailFromForm() {
+  await getToken();
+  if (currentAccessToken) await listEmails();
+}
+
+async function viewEmail(mailId) {
+  const detail = document.getElementById('email-detail');
+  detail.textContent = '加载中...';
+  detail.className = 'detail-box';
+
+  const d = await post('/api/email/body', {
+    email: currentEmail || document.getElementById('mail-email').value.trim(),
+    access_token: currentAccessToken,
+    mail_id: mailId
+  });
+
+  if (!d.ok) {
+    detail.textContent = '错误: ' + d.error;
+    detail.classList.add('is-error');
+    return;
+  }
+
+  detail.innerHTML = `<strong>${escHtml(d.subject)}</strong>\n发件人: ${escHtml(d.from)}\n时间: ${escHtml(d.date)}\n${'─'.repeat(60)}\n${escHtml(d.body)}`;
+}
+
+syncDefaults(true);
+</script>
+</body>
+</html>
