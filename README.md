@@ -81,15 +81,6 @@ npm run dev
 
 Vite 开发服务器默认使用 `5173` 端口，并把 `/api` 代理到 `http://localhost:5000`。
 
-## Docker GitHub Actions
-
-仓库已添加 `.github/workflows/docker-image.yml`：
-
-- `push` 到 `main` / `master` 会构建并推送镜像到 GHCR
-- `pull_request` 只做构建验证，不推送
-- `tag v*.*.*` 会同时打版本标签
-- 镜像名：`ghcr.io/<owner>/openmaill`
-
 ## Docker 部署
 
 构建镜像：
@@ -115,7 +106,11 @@ gunicorn --bind 0.0.0.0:5000 app:app
 
 ## Docker Compose 部署
 
-仓库里已经提供了 `docker-compose.yml`，可以直接用来本地或服务器部署。
+仓库里已经提供了 `docker-compose.yml`，默认使用仓库镜像：
+
+```text
+ghcr.io/acmuhan/openmaill:latest
+```
 
 复制环境变量文件：
 
