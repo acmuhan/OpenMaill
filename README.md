@@ -117,6 +117,8 @@ gunicorn --bind 0.0.0.0:5000 app:app
 
 ## Docker Compose 部署
 
+仓库里已经提供了 `docker-compose.yml`，可以直接用来本地或服务器部署。
+
 复制环境变量文件：
 
 ```powershell
