@@ -1,114 +1,167 @@
 /**
- * 邮件正文识别助手：
- *  - extractOtp：提取验证码 / 一次性密码
- *  - extractLinks：识别正文中的链接
- *  - stripHtml：把 HTML 转为可读纯文本
- *  - sanitizeHtml：构建可在 sandbox iframe 渲染的安全 HTML
+ * Mail body helpers:
+ *  - extractOtp: local heuristic + multi-regex OTP extraction
+ *  - extractLinks: body URL detection
+ *  - normalizeMailText / stripHtml: safe text extraction for scoring and display
+ *  - sanitizeHtml: sandbox iframe HTML wrapper
  */
+
+export interface OtpScoreBreakdown {
+  base: number
+  bonuses: string[]
+  penalties: string[]
+  final: number
+}
 
 export interface OtpHit {
   code: string
-  /** 命中上下文片段（首次出现的位置 ±40 字） */
+  /** Context snippet around the first useful occurrence. */
   context: string
-  /** 命中来源：关键词 / 结构化标签 / 模式 / 启发式 */
-  source: 'keyword' | 'structured' | 'pattern' | 'heuristic'
-  confidence: number // 0-1
+  /** Match source. Existing UI only relies on the string value. */
+  source: 'keyword' | 'structured' | 'pattern' | 'heuristic' | 'semantic'
+  confidence: number
+  reason: string
+  scoreBreakdown: OtpScoreBreakdown
 }
 
-const KEYWORDS = [
-  '验证码', '动态码', '校验码', '驗證碼', '验证代码', '安全代码', '安全码', '一次性代码', '一次性密码',
-  '驗證代碼', '認證碼', '確認碼', '登录代码', '登入代码',
-  'verification code', 'verify code', 'security code',
-  'one[- ]?time password', 'one[- ]?time code',
-  'otp', 'auth code', 'access code', 'confirmation code',
-  'login code', 'sign[- ]?in code', 'two[- ]?factor code',
-  'pin', 'code is', 'your code', 'use code', 'enter code',
+export interface OtpExtractInput {
+  body: string
+  subject?: string
+  from?: string
+  date?: string
+}
+
+export interface OtpExtractOptions {
+  semanticHints?: string[]
+}
+
+interface PatternSpec {
+  source: OtpHit['source']
+  base: number
+  re: RegExp
+}
+
+interface Candidate {
+  rawCode: string
+  index: number
+  source: OtpHit['source']
+  base: number
+}
+
+const MAX_TEXT_LENGTH = 20_000
+const CONTEXT_RADIUS = 72
+const MIN_DISPLAY_CONFIDENCE = 0.55
+const HIGH_CONFIDENCE = 0.78
+
+const OTP_KEYWORD_SCAN_RE =
+  /验证码|驗證碼|动态码|動態碼|校验码|校驗碼|安全码|安全碼|一次性(?:代码|代碼|密码|密碼)|verification\s*code|security\s*code|one[-\s]?time\s*(?:password|code)|otp|login\s*code|sign[-\s]?in\s*code|your\s*code|auth\s*code|passcode/gi
+
+const ACTION_CONTEXT_RE = /登录|登入|验证|驗證|校验|確認|确认|verify|sign\s*in|log\s*in|authenticate|confirm|enter/i
+const REJECT_CONTEXT_RE =
+  /order|invoice|ticket|phone|mobile|tel|amount|price|total|tracking|shipment|zip|postal|postcode|receipt|订单|訂單|金额|金額|电话|電話|手机号|手機號|工单|工單|发票|發票|快递|快遞|邮编|郵編|运单|運單/i
+const URL_PARAM_CONTEXT_RE = /https?:\/\/|[?&][A-Za-z0-9_-]+=/
+
+const PATTERNS: PatternSpec[] = [
+  {
+    source: 'keyword',
+    base: 0.75,
+    re: /(?:验证码|驗證碼|动态码|校验码|安全码|一次性(?:代码|密码)|verification\s*code|security\s*code|one[-\s]?time\s*(?:password|code)|otp|login\s*code|your\s*code)\D{0,40}([A-Za-z0-9](?:[A-Za-z0-9\s-]{2,14})[A-Za-z0-9])/gi,
+  },
+  {
+    source: 'structured',
+    base: 0.68,
+    re: /\b(?:code|otp|pin|passcode)\s*[:：#-]?\s*([A-Za-z0-9]{2,4}(?:[\s-][A-Za-z0-9]{2,4}){1,3}|[A-Za-z0-9]{4,10})\b/gi,
+  },
+  {
+    source: 'heuristic',
+    base: 0.45,
+    re: /(?<!\d)(\d(?:[\s-]?\d){3,7})(?!\d)/g,
+  },
+  {
+    source: 'pattern',
+    base: 0.55,
+    re: /(?<![A-Z0-9])([A-Z]{1,4}\d[A-Z0-9]{2,8}|\d[A-Z][A-Z0-9]{2,8})(?![A-Z0-9])/g,
+  },
 ]
 
-const KEYWORD_RE = new RegExp(`(?:${KEYWORDS.join('|')})[^A-Za-z0-9\\u4e00-\\u9fa5]{0,48}([A-Za-z0-9][A-Za-z0-9\\s-]{2,18}[A-Za-z0-9])`, 'gi')
-const LABELED_RE = /\b(?:code|otp|pin)\s*[:：#-]?\s*([A-Za-z0-9][A-Za-z0-9\s-]{2,18}[A-Za-z0-9])\b/gi
-const ENG_DIGIT_RE = /\b(\d[\d\s-]{2,14}\d)\b/g
-const ALPHA_DIGIT_RE = /\b([A-Z0-9][A-Z0-9 -]{3,16}[A-Z0-9])\b/g
-const REJECT_CONTEXT_RE = /(order|invoice|ticket|phone|mobile|tel|amount|price|total|tracking|zip|postal|订单|金额|电话|手机号|工单|发票|快递|邮编)/i
-const REJECT_CODE_RE = /^(?:0000+|1111+|1234(?:56|5678)?|9999+)$/
+const URL_RE = /https?:\/\/[^\s<>"']{4,}/g
 
-/**
- * 从邮件正文中尝试提取验证码。返回置信度最高的若干候选。
- */
-export function extractOtp(rawText: string, max = 3): OtpHit[] {
-  if (!rawText) return []
-  const text = rawText.replace(/\s+/g, ' ').trim()
-  const hits: OtpHit[] = []
-  const seen = new Set<string>()
-
-  function normalizeCode(code: string): string {
-    const cleaned = code.replace(/[\s-]/g, '').trim()
-    return /[a-z]/.test(cleaned) ? cleaned.toUpperCase() : cleaned
-  }
-
-  function penalty(code: string, context: string): number {
-    let value = 0
-    if (REJECT_CONTEXT_RE.test(context)) value += 0.28
-    if (REJECT_CODE_RE.test(code)) value += 0.2
-    if (/^(19|20)\d{2}$/.test(code)) value += 0.35
-    if (/^\d{9,}$/.test(code)) value += 0.25
-    return value
-  }
-
-  function pushHit(rawCode: string, idx: number, source: OtpHit['source'], confidence: number) {
-    const code = normalizeCode(rawCode)
-    if (!code || seen.has(code)) return
-    if (!/^[A-Z0-9]{4,10}$/.test(code)) return
-    if (/^[A-Z]+$/.test(code)) return
-    const start = Math.max(0, idx - 40)
-    const end = Math.min(text.length, idx + code.length + 40)
-    const context = text.slice(start, end).trim()
-    const adjusted = Math.max(0.1, confidence - penalty(code, context))
-    if (adjusted < 0.45) return
-    seen.add(code)
-    hits.push({
-      code,
-      source,
-      confidence: adjusted,
-      context,
-    })
-  }
-
-  // 1) 关键词附近的优先级最高
-  for (const match of text.matchAll(KEYWORD_RE)) {
-    pushHit(match[1], match.index ?? 0, 'keyword', 0.95)
-  }
-
-  // 2) 常见英文结构化标签：Code: 123456 / OTP # 842901
-  for (const match of text.matchAll(LABELED_RE)) {
-    pushHit(match[1], match.index ?? 0, 'structured', 0.88)
-  }
-
-  // 3) 大写字母+数字的 5-8 位组合（典型 OTP 形式：XK9F4Q）
-  if (hits.length < max) {
-    for (const match of text.matchAll(ALPHA_DIGIT_RE)) {
-      const code = normalizeCode(match[1])
-      if (!/\d/.test(code) || !/[A-Z]/.test(code)) continue // 必须含字母+数字
-      pushHit(code, match.index ?? 0, 'pattern', 0.7)
-      if (hits.length >= max) break
-    }
-  }
-
-  // 4) 纯数字 4-8 位（最后才考虑，且需要"独立"于上下文）
-  if (hits.length < max) {
-    for (const match of text.matchAll(ENG_DIGIT_RE)) {
-      const code = normalizeCode(match[1])
-      // 排除明显是年份 / 邮编 / 价格
-      if (/^(19|20)\d{2}$/.test(code)) continue
-      pushHit(code, match.index ?? 0, 'heuristic', 0.55)
-      if (hits.length >= max) break
-    }
-  }
-
-  return hits.sort((a, b) => b.confidence - a.confidence).slice(0, max)
+export function normalizeMailText(raw: string): string {
+  if (!raw) return ''
+  const text = looksLikeHtml(raw) ? htmlToTextContent(raw) : decodeEntities(raw)
+  return text
+    .replace(/\u00a0/g, ' ')
+    .replace(/[ \t\r\f\v]+/g, ' ')
+    .replace(/\n\s+/g, '\n')
+    .replace(/\n{3,}/g, '\n\n')
+    .trim()
+    .slice(0, MAX_TEXT_LENGTH)
 }
 
-const URL_RE = /https?:\/\/[^\s<>"']{4,}/g
+/**
+ * Extract OTP candidates from mail text. It is fully local and never sends
+ * body content to a backend service.
+ */
+export function extractOtp(input: string | OtpExtractInput, max = 3, options: OtpExtractOptions = {}): OtpHit[] {
+  const payload = typeof input === 'string' ? { body: input } : input
+  const subject = normalizeMailText(payload.subject || '')
+  const body = normalizeMailText(payload.body || '')
+  if (!subject && !body) return []
+
+  const header = [subject && `Subject: ${subject}`, payload.from && `From: ${payload.from}`, payload.date && `Date: ${payload.date}`]
+    .filter(Boolean)
+    .join('\n')
+  const text = [header, body].filter(Boolean).join('\n\n').slice(0, MAX_TEXT_LENGTH)
+  const subjectLimit = header.length
+  const candidates: Candidate[] = []
+
+  for (const spec of PATTERNS) {
+    spec.re.lastIndex = 0
+    for (const match of text.matchAll(spec.re)) {
+      candidates.push({
+        rawCode: match[1],
+        index: match.index ?? 0,
+        source: spec.source,
+        base: spec.base,
+      })
+    }
+  }
+
+  for (const hint of options.semanticHints || []) {
+    const hintText = normalizeMailText(hint)
+    if (!hintText) continue
+    for (const spec of PATTERNS) {
+      spec.re.lastIndex = 0
+      for (const match of hintText.matchAll(spec.re)) {
+        const rawCode = match[1]
+        candidates.push({
+          rawCode,
+          index: Math.max(0, text.indexOf(rawCode.replace(/[\s-]/g, ''))),
+          source: 'semantic',
+          base: Math.max(spec.base, 0.62),
+        })
+      }
+    }
+  }
+
+  const best = new Map<string, OtpHit>()
+  for (const candidate of candidates) {
+    const hit = scoreCandidate(candidate, text, subjectLimit, options.semanticHints || [])
+    if (!hit || hit.confidence < MIN_DISPLAY_CONFIDENCE) continue
+    const previous = best.get(hit.code)
+    if (!previous || hit.confidence > previous.confidence) best.set(hit.code, hit)
+  }
+
+  return Array.from(best.values())
+    .sort((a, b) => b.confidence - a.confidence)
+    .slice(0, max)
+}
+
+export function shouldRunSemanticOtp(hits: OtpHit[]): boolean {
+  if (!hits.length) return true
+  if (hits[0].confidence < HIGH_CONFIDENCE) return true
+  return hits.length > 1 && hits[0].confidence - hits[1].confidence < 0.08
+}
 
 export function extractLinks(rawText: string, max = 6): string[] {
   if (!rawText) return []
@@ -120,42 +173,23 @@ export function extractLinks(rawText: string, max = 6): string[] {
   return Array.from(out)
 }
 
-const HTML_TAG_RE = /<\/?[^>]+>/g
-const HTML_ENTITY = /&(amp|lt|gt|quot|#39|nbsp);/g
-
 export function stripHtml(html: string): string {
-  if (!html) return ''
-  // 先把 <br>, </p>, </div> 替换为换行
-  const withBreaks = html
-    .replace(/<br\s*\/?>/gi, '\n')
-    .replace(/<\/(p|div|li|tr|h[1-6])>/gi, '\n')
-  return withBreaks
-    .replace(HTML_TAG_RE, '')
-    .replace(HTML_ENTITY, (_m, e) => {
-      switch (e) {
-        case 'amp': return '&'
-        case 'lt': return '<'
-        case 'gt': return '>'
-        case 'quot': return '"'
-        case '#39': return "'"
-        case 'nbsp': return ' '
-        default: return ''
-      }
-    })
-    .replace(/\n{3,}/g, '\n\n')
-    .trim()
+  return normalizeMailText(html)
 }
 
 /**
- * 构建可在 sandbox iframe 渲染的最小安全 HTML：
- *  - 去掉 <script> / event handlers
- *  - 强制所有 a target="_blank" + rel="noopener"
- *  - 包一层 base style 防止字体过小
+ * Build minimal safe HTML for sandbox iframe rendering:
+ *  - removes script/style-like active content
+ *  - strips event handlers
+ *  - forces safe external link attributes
  */
 export function sanitizeHtml(html: string): string {
   if (!html) return ''
-  const noScript = html.replace(/<script[\s\S]*?<\/script>/gi, '')
-  const noEvents = noScript.replace(/\son[a-z]+="[^"]*"/gi, '').replace(/\son[a-z]+='[^']*'/gi, '')
+  const noActive = html
+    .replace(/<script[\s\S]*?<\/script>/gi, '')
+    .replace(/<style[\s\S]*?<\/style>/gi, '')
+    .replace(/<noscript[\s\S]*?<\/noscript>/gi, '')
+  const noEvents = noActive.replace(/\son[a-z]+="[^"]*"/gi, '').replace(/\son[a-z]+='[^']*'/gi, '')
   const safeLinks = noEvents.replace(/<a\s/gi, '<a target="_blank" rel="noopener noreferrer" ')
 
   return `<!doctype html><html><head><meta charset="utf-8">
@@ -168,10 +202,213 @@ export function sanitizeHtml(html: string): string {
 </style></head><body>${safeLinks}</body></html>`
 }
 
-/**
- * 简易检测原文是否疑似 HTML 内容。
- */
 export function looksLikeHtml(raw: string): boolean {
   if (!raw) return false
-  return /<\/?(html|body|div|p|table|span|a|img|br|h[1-6])\b/i.test(raw)
+  return /<\/?(html|body|div|p|table|span|a|img|br|h[1-6]|style|script)\b/i.test(raw)
 }
+
+function scoreCandidate(candidate: Candidate, text: string, subjectLimit: number, semanticHints: string[]): OtpHit | null {
+  const code = normalizeCode(candidate.rawCode)
+  if (!isValidCodeShape(code)) return null
+
+  const idx = candidate.index
+  const context = sliceContext(text, idx, code.length)
+  if (shouldReject(code, context)) return null
+
+  let score = candidate.base
+  const bonuses: string[] = [`base:${candidate.source}+${candidate.base.toFixed(2)}`]
+  const penalties: string[] = []
+
+  const keywordDistance = nearestKeywordDistance(text, idx)
+  if (keywordDistance >= 0 && keywordDistance <= 12) {
+    score += 0.25
+    bonuses.push('keyword-distance-0-12:+0.25')
+  } else if (keywordDistance > 12 && keywordDistance <= 40) {
+    score += 0.15
+    bonuses.push('keyword-distance-13-40:+0.15')
+  }
+
+  if (idx <= subjectLimit) {
+    score += 0.12
+    bonuses.push('subject:+0.12')
+  }
+
+  if (/^\d{6}$/.test(code)) {
+    score += 0.12
+    bonuses.push('six-digit:+0.12')
+  }
+
+  if (ACTION_CONTEXT_RE.test(context)) {
+    score += 0.08
+    bonuses.push('action-context:+0.08')
+  }
+
+  if (semanticHints.some((hint) => hint.includes(candidate.rawCode) || hint.includes(code))) {
+    score += 0.1
+    bonuses.push('semantic-sentence:+0.10')
+  }
+
+  const penalty = scorePenalty(code, context)
+  score -= penalty.value
+  penalties.push(...penalty.reasons)
+
+  const final = clamp(score, 0.1, 0.99)
+  return {
+    code,
+    context,
+    source: candidate.source,
+    confidence: final,
+    reason: buildReason(candidate.source, bonuses, penalties),
+    scoreBreakdown: {
+      base: candidate.base,
+      bonuses,
+      penalties,
+      final,
+    },
+  }
+}
+
+function normalizeCode(code: string): string {
+  const cleaned = code.replace(/[\s-]/g, '').trim()
+  return /[a-z]/.test(cleaned) ? cleaned.toUpperCase() : cleaned
+}
+
+function isValidCodeShape(code: string): boolean {
+  if (!/^[A-Z0-9]{4,10}$/.test(code)) return false
+  if (/^[A-Z]+$/.test(code)) return false
+  if (/^\d{11,}$/.test(code)) return false
+  return true
+}
+
+function shouldReject(code: string, context: string): boolean {
+  if (/^\d{11,}$/.test(code)) return true
+  if (/^1[3-9]\d{9}$/.test(code)) return true
+  if (/^(19|20)\d{2}$/.test(code)) return true
+  if (/^\d{4}[-/]?\d{1,2}[-/]?\d{1,2}$/.test(code)) return true
+  if (/^\d{5}(?:-\d{4})?$/.test(code) && /(zip|postal|postcode|邮编|郵編)/i.test(context)) return true
+  if (URL_PARAM_CONTEXT_RE.test(context) && /^\d{8,}$/.test(code)) return true
+  return false
+}
+
+function scorePenalty(code: string, context: string): { value: number; reasons: string[] } {
+  let value = 0
+  const reasons: string[] = []
+
+  if (REJECT_CONTEXT_RE.test(context)) {
+    value += 0.28
+    reasons.push('reject-context:-0.28')
+  }
+  if (isRepeatedOrSequential(code)) {
+    value += 0.25
+    reasons.push('repeated-or-sequential:-0.25')
+  }
+  if (/^\d{8,10}$/.test(code)) {
+    value += 0.16
+    reasons.push('long-numeric:-0.16')
+  }
+  if (/(amount|price|total|金额|金額|¥|\$|€)/i.test(context) && /^\d+$/.test(code)) {
+    value += 0.24
+    reasons.push('money-context:-0.24')
+  }
+  if (/(order|invoice|tracking|订单|訂單|发票|發票|运单|運單)/i.test(context)) {
+    value += 0.22
+    reasons.push('business-id-context:-0.22')
+  }
+
+  return { value, reasons }
+}
+
+function nearestKeywordDistance(text: string, index: number): number {
+  let nearest = Number.POSITIVE_INFINITY
+  OTP_KEYWORD_SCAN_RE.lastIndex = 0
+  for (const match of text.matchAll(OTP_KEYWORD_SCAN_RE)) {
+    const keywordIndex = match.index ?? 0
+    nearest = Math.min(nearest, Math.abs(index - keywordIndex))
+  }
+  return Number.isFinite(nearest) ? nearest : -1
+}
+
+function sliceContext(text: string, index: number, length: number): string {
+  const start = Math.max(0, index - CONTEXT_RADIUS)
+  const end = Math.min(text.length, index + length + CONTEXT_RADIUS)
+  return text.slice(start, end).replace(/\s+/g, ' ').trim()
+}
+
+function isRepeatedOrSequential(code: string): boolean {
+  if (/^(.)\1{3,}$/.test(code)) return true
+  if (!/^\d{4,10}$/.test(code)) return false
+  const digits = code.split('').map(Number)
+  const asc = digits.every((digit, i) => i === 0 || digit === digits[i - 1] + 1)
+  const desc = digits.every((digit, i) => i === 0 || digit === digits[i - 1] - 1)
+  return asc || desc
+}
+
+function buildReason(source: OtpHit['source'], bonuses: string[], penalties: string[]): string {
+  const sourceLabel: Record<OtpHit['source'], string> = {
+    keyword: '关键词上下文',
+    structured: '结构化标签',
+    pattern: '字母数字模式',
+    heuristic: '纯数字启发式',
+    semantic: '语义句子增强',
+  }
+  const risk = penalties.length ? `，扣分：${penalties.join(', ')}` : ''
+  return `${sourceLabel[source]}；${bonuses.join(', ')}${risk}`
+}
+
+function htmlToTextContent(html: string): string {
+  if (typeof DOMParser === 'undefined') return fallbackStripHtml(html)
+  try {
+    const doc = new DOMParser().parseFromString(html, 'text/html')
+    doc.querySelectorAll('script,style,noscript,svg,img,meta,link,template').forEach((node) => node.remove())
+    doc.querySelectorAll('br,p,div,li,tr,h1,h2,h3,h4,h5,h6').forEach((node) => {
+      node.appendChild(doc.createTextNode('\n'))
+    })
+    return decodeEntities(doc.body?.textContent || '')
+  } catch {
+    return fallbackStripHtml(html)
+  }
+}
+
+function fallbackStripHtml(html: string): string {
+  return decodeEntities(
+    html
+      .replace(/<script[\s\S]*?<\/script>/gi, '')
+      .replace(/<style[\s\S]*?<\/style>/gi, '')
+      .replace(/<br\s*\/?>/gi, '\n')
+      .replace(/<\/(p|div|li|tr|h[1-6])>/gi, '\n')
+      .replace(/<\/?[^>]+>/g, ''),
+  )
+}
+
+function decodeEntities(text: string): string {
+  if (!text) return ''
+  if (typeof document !== 'undefined') {
+    const box = document.createElement('textarea')
+    box.innerHTML = text
+    return box.value
+  }
+  return text.replace(/&(amp|lt|gt|quot|#39|nbsp);/g, (_m, e) => {
+    switch (e) {
+      case 'amp':
+        return '&'
+      case 'lt':
+        return '<'
+      case 'gt':
+        return '>'
+      case 'quot':
+        return '"'
+      case '#39':
+        return "'"
+      case 'nbsp':
+        return ' '
+      default:
+        return ''
+    }
+  })
+}
+
+function clamp(value: number, min: number, max: number): number {
+  return Math.max(min, Math.min(max, Number(value.toFixed(2))))
+}
+
+export { HIGH_CONFIDENCE }

@@ -2,13 +2,17 @@
 import { computed, ref, watch } from 'vue'
 import { BaseCard, BaseButton, BaseChip, BaseSwitch, BaseEmpty, BaseTabs } from '@/components/ui'
 import { currentMail, currentMailId, prefs } from '@/stores/mail.store'
-import { extractOtp, extractLinks, looksLikeHtml, stripHtml, sanitizeHtml } from '@/services/mail-body.service'
+import { extractOtp, extractLinks, looksLikeHtml, stripHtml, sanitizeHtml, shouldRunSemanticOtp, type OtpHit } from '@/services/mail-body.service'
+import { extractOtpWithSemanticFallback, preloadOtpSemanticModel, type OtpAiStatus } from '@/services/otp-ai.service'
 import { useToast } from '@/stores/toast.store'
 
 const toast = useToast()
 
 type ViewMode = 'auto' | 'text' | 'html' | 'raw'
 const viewMode = ref<ViewMode>('auto')
+const semanticHits = ref<OtpHit[]>([])
+const semanticHints = ref<string[]>([])
+const aiStatus = ref<OtpAiStatus>('idle')
 
 const viewTabs = computed(() => [
   { value: 'auto', label: '智能' },
@@ -29,8 +33,25 @@ const sandboxHtml = computed(() => {
   return isHtml.value ? sanitizeHtml(currentMail.value.body) : sanitizeHtml(`<pre>${escapeHtml(currentMail.value.body)}</pre>`)
 })
 
-const otpHits = computed(() => (currentMail.value ? extractOtp(textBody.value, 3) : []))
+const ruleOtpHits = computed(() =>
+  currentMail.value
+    ? extractOtp({
+        subject: currentMail.value.subject,
+        from: currentMail.value.from,
+        date: currentMail.value.date,
+        body: currentMail.value.body,
+      }, 3)
+    : [],
+)
+const otpHits = computed(() => (semanticHits.value.length ? semanticHits.value : ruleOtpHits.value))
 const links = computed(() => (currentMail.value ? extractLinks(textBody.value, 6) : []))
+const shouldUseSemantic = computed(() => currentMail.value && shouldRunSemanticOtp(ruleOtpHits.value))
+const aiStatusLabel = computed(() => {
+  if (aiStatus.value === 'loading') return '本地语义模型加载中'
+  if (aiStatus.value === 'ready' && semanticHints.value.length) return '本地语义已增强'
+  if (aiStatus.value === 'unavailable') return '已降级为规则识别'
+  return ''
+})
 
 const effectiveMode = computed<'text' | 'html' | 'raw'>(() => {
   if (viewMode.value === 'auto') {
@@ -44,7 +65,42 @@ const effectiveMode = computed<'text' | 'html' | 'raw'>(() => {
 // 切换邮件时，回到 auto 模式
 watch(currentMailId, () => {
   viewMode.value = 'auto'
+  semanticHits.value = []
+  semanticHints.value = []
+  aiStatus.value = 'idle'
 })
+
+watch(
+  () => [currentMailId.value, currentMail.value?.body, currentMail.value?.subject],
+  async () => {
+    semanticHits.value = []
+    semanticHints.value = []
+    if (!currentMail.value || !shouldUseSemantic.value) return
+
+    aiStatus.value = 'loading'
+    const mail = currentMail.value
+    const result = await extractOtpWithSemanticFallback(
+      {
+        subject: mail.subject,
+        from: mail.from,
+        date: mail.date,
+        body: mail.body,
+      },
+      ruleOtpHits.value,
+      3,
+    )
+
+    if (currentMail.value !== mail) return
+    aiStatus.value = result.status
+    semanticHints.value = result.semanticHints
+    semanticHits.value = result.hits
+  },
+  { immediate: true },
+)
+
+if ('requestIdleCallback' in window) {
+  window.requestIdleCallback(() => preloadOtpSemanticModel().catch(() => {}), { timeout: 5000 })
+}
 
 async function copyText(text: string, hint = '已复制') {
   try {
@@ -62,6 +118,17 @@ function escapeHtml(s: string): string {
     .replace(/>/g, '&gt;')
     .replace(/"/g, '&quot;')
     .replace(/'/g, '&#39;')
+}
+
+function sourceLabel(hit: OtpHit): string {
+  const labels: Record<OtpHit['source'], string> = {
+    keyword: '关键词匹配',
+    structured: '结构化匹配',
+    pattern: '模式匹配',
+    heuristic: '启发式',
+    semantic: '语义增强',
+  }
+  return labels[hit.source]
 }
 </script>
 
@@ -110,6 +177,9 @@ function escapeHtml(s: string): string {
             <path stroke-linecap="round" stroke-linejoin="round" d="m9 12.75 3 3m0 0 3-3m-3 3v-7.5M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
           </svg>
           自动识别验证码
+          <BaseChip v-if="aiStatusLabel" :variant="aiStatus === 'unavailable' ? 'warning' : 'info'" size="sm">
+            {{ aiStatusLabel }}
+          </BaseChip>
         </div>
         <div class="flex flex-wrap gap-3">
           <button
@@ -120,10 +190,17 @@ function escapeHtml(s: string): string {
           >
             <span class="text-2xl sm:text-3xl font-bold tracking-[0.2em] text-primary font-mono">{{ hit.code }}</span>
             <span class="text-[10px] uppercase tracking-wider text-on-surface-variant/70 group-hover:text-primary">
-              点击复制 · {{ hit.source === 'keyword' ? '关键词匹配' : hit.source === 'pattern' ? '模式匹配' : '启发式' }}
+              点击复制 · {{ sourceLabel(hit) }} · {{ Math.round(hit.confidence * 100) }}%
             </span>
           </button>
         </div>
+      </div>
+
+      <div
+        v-else-if="aiStatus === 'loading'"
+        class="rounded-md border border-outline-variant/40 bg-surface-container-low/50 px-4 py-3 text-sm text-on-surface-variant"
+      >
+        本地语义模型加载中，正在尝试定位验证码句子。
       </div>
 
       <!-- 视图切换 -->
