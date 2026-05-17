@@ -7,6 +7,7 @@ const KEY_INSTANCES = 'providers.v2'
 const KEY_ACTIVE_ACCOUNT = 'providers.activeAccountId'
 const KEY_ACTIVE_MAIL = 'providers.activeMailId'
 const KEY_LEGACY = 'providers'
+const LEGACY_ZHANGHAOYA_NAME = '\u8d26\u53f7\u9e2d'
 
 interface LegacyProvider {
   id: string
@@ -52,6 +53,9 @@ function defaultOutlookInstance(): ToolInstance {
 function bootstrap(): ToolInstance[] {
   const saved = loadJson<ToolInstance[] | null>(KEY_INSTANCES, null)
   if (Array.isArray(saved) && saved.length) {
+    for (const item of saved) {
+      if (item.toolId === 'zhanghaoya' && item.name === LEGACY_ZHANGHAOYA_NAME) item.name = '第三方账号 API'
+    }
     // 修补：旧存档若没有 mail 实例，补一个 Outlook 默认实例
     if (!saved.some((i) => getTool(i.toolId)?.category === 'mail')) {
       saved.push(defaultOutlookInstance())
@@ -72,7 +76,7 @@ function bootstrap(): ToolInstance[] {
     {
       id: 'zhanghaoya-default',
       toolId: 'zhanghaoya',
-      name: '账号鸭',
+      name: '第三方账号 API',
       config: {
         base_url: (d.base_url || 'https://www.zhanghaoya.com').replace(/\/+$/, ''),
         key: d.key || '',

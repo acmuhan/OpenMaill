@@ -52,6 +52,7 @@ export function applyAppearance(): void {
   const primary = clampHex(accent.value)
 
   root.dataset.theme = actualTheme
+  document.querySelector('meta[name="theme-color"]')?.setAttribute('content', primary)
   root.style.setProperty('--color-primary', primary)
   root.style.setProperty('--color-primary-container', mix(primary, [0, 0, 0], 0.15))
   root.style.setProperty('--color-primary-fixed', mix(primary, [255, 255, 255], actualTheme === 'dark' ? 0.78 : 0.86))

@@ -12,7 +12,7 @@ export const gmailTool: ToolDefinition<GmailConfig> = {
   name: 'Gmail',
   vendor: 'Google',
   homepage: 'https://developers.google.com/gmail/api',
-  description: '通过 Google OAuth2 接入 Gmail API。后端 /api/gmail/* 端点预留。',
+  description: '按 Google 官方 OAuth2 + Gmail API 协议准备字段；后端 /api/gmail/* 端点预留。',
   category: 'mail',
   available: false,
   badge: 'preview',
@@ -22,7 +22,7 @@ export const gmailTool: ToolDefinition<GmailConfig> = {
     { key: 'email', label: '邮箱地址', type: 'email', required: true, placeholder: 'user@gmail.com', cols: 1 },
     { key: 'client_id', label: 'OAuth Client ID', type: 'text', required: true, cols: 1 },
     { key: 'client_secret', label: 'OAuth Client Secret', type: 'password', required: true, mask: true, cols: 1 },
-    { key: 'refresh_token', label: 'Refresh Token / App Password', type: 'textarea', required: true, mask: true, rows: 3, cols: 2 },
+    { key: 'refresh_token', label: 'Refresh Token', type: 'textarea', required: true, mask: true, rows: 3, cols: 2 },
   ],
   defaults: { email: '', client_id: '', client_secret: '', refresh_token: '' },
   actions: {

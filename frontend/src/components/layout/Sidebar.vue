@@ -73,7 +73,7 @@ const mailToolName = computed(() => (activeMail.value ? getTool(activeMail.value
         </div>
         <Transition name="fade">
           <div v-if="!sidebarCollapsed" class="flex flex-col leading-none">
-            <span class="text-base font-bold text-on-surface tracking-tight">OpenMail</span>
+            <span class="text-base font-bold text-on-surface tracking-tight">OpenImage</span>
             <span class="text-[10px] text-on-surface-variant/70 tracking-wider uppercase mt-1">Multi-Tool Suite</span>
           </div>
         </Transition>

@@ -11,7 +11,9 @@ export interface ImapConfig extends Record<string, unknown> {
 export const imapTool: ToolDefinition<ImapConfig> = {
   id: 'imap',
   name: 'IMAP / SMTP',
-  description: '通用邮箱协议适配，可接入自建邮箱、企业邮箱、QQ / 163 等。后端 /api/imap/* 预留。',
+  vendor: 'RFC 9051 / mailbox provider',
+  homepage: 'https://datatracker.ietf.org/doc/html/rfc9051',
+  description: '通用 IMAP 登录协议适配，可接入自建邮箱、企业邮箱、QQ / 163 等；后端 /api/imap/* 端点预留。',
   category: 'mail',
   available: false,
   badge: 'preview',

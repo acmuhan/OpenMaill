@@ -36,10 +36,10 @@ def _request_json(base_url: str, path: str, params: dict[str, Any], timeout: int
 class ZhanghaoyaAccountTool(AccountTool):
     definition = ToolDefinition(
         id="zhanghaoya",
-        name="账号鸭",
+        name="第三方账号 API",
         category="account",
         vendor="zhanghaoya",
-        description="兼容 /store/ga/* 的账号购买、余额和历史接口。",
+        description="当前接入的第三方账号购买、余额和历史接口。",
         fields=[
             {"id": "base_url", "name": "API 服务器地址", "type": "url", "required": True},
             {"id": "key", "name": "API Key", "type": "password", "required": True},

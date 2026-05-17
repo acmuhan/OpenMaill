@@ -67,7 +67,7 @@ function applyPasted() {
 }
 
 function clearLocal() {
-  if (!confirm('确定清除浏览器中保存的全部 OpenMail 数据？此操作不可撤销。')) return
+  if (!confirm('确定清除浏览器中保存的全部 OpenImage 数据？此操作不可撤销。')) return
   for (const key of Object.keys(localStorage)) {
     if (key.startsWith('openmail.')) localStorage.removeItem(key)
   }
@@ -87,7 +87,7 @@ function clearLocal() {
         />
         <div class="rounded-md bg-surface-container-low/60 p-4 text-xs text-on-surface-variant/80 leading-relaxed">
           <strong class="text-on-surface">关于安全：</strong>
-          即使开启 HTML 渲染，OpenMail 仍会自动 <em>移除 &lt;script&gt;、所有 on* 事件</em>，并把链接强制设为 <code>target="_blank"</code> + <code>rel="noopener noreferrer"</code>。
+          即使开启 HTML 渲染，OpenImage 仍会自动 <em>移除 &lt;script&gt;、所有 on* 事件</em>，并把链接强制设为 <code>target="_blank"</code> + <code>rel="noopener noreferrer"</code>。
         </div>
       </div>
     </BaseCard>

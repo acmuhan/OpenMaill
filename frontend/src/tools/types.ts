@@ -68,7 +68,7 @@ export interface ToolInstance<C extends Record<string, unknown> = Record<string,
   id: string
   /** 引用的 Tool 定义 ID */
   toolId: string
-  /** 用户自定义名称（如 "账号鸭主号"） */
+  /** 用户自定义名称（如 "主账号源"） */
   name: string
   config: C
   enabled: boolean

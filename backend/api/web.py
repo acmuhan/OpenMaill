@@ -26,8 +26,25 @@ def index():
 
 
 @bp.route("/favicon.ico")
+@bp.route("/favicon.svg")
 def favicon():
     dist_dir = current_app.config["DIST_DIR"]
     if os.path.isfile(os.path.join(dist_dir, "favicon.svg")):
         return send_from_directory(dist_dir, "favicon.svg")
     return ("", 204)
+
+
+@bp.route("/manifest.webmanifest")
+def manifest():
+    dist_dir = current_app.config["DIST_DIR"]
+    if os.path.isfile(os.path.join(dist_dir, "manifest.webmanifest")):
+        return send_from_directory(dist_dir, "manifest.webmanifest")
+    return ("", 404)
+
+
+@bp.route("/sw.js")
+def service_worker():
+    dist_dir = current_app.config["DIST_DIR"]
+    if os.path.isfile(os.path.join(dist_dir, "sw.js")):
+        return send_from_directory(dist_dir, "sw.js")
+    return ("", 404)

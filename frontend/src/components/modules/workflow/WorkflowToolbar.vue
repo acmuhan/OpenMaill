@@ -108,8 +108,8 @@ function clearInput() {
 
 <template>
   <BaseCard
-    title="账号鸭 / 通用 Token 工具栏"
-    subtitle="粘贴账号鸭等服务的账号串，一键解析并填入当前 Outlook 实例"
+    title="账号串 / Token 工具栏"
+    subtitle="粘贴第三方账号 API 导出的账号串，一键解析并填入当前 Outlook 实例"
     padding="lg"
     elevation="lifted"
   >
@@ -130,7 +130,7 @@ function clearInput() {
         :rows="4"
         placeholder="邮箱----密码----ClientID----RefreshToken
 也支持以 ':' 为分隔符；可一次粘贴多行。"
-        hint="自动识别账号鸭 / 通用导出格式，忽略空行与 <br> 等多余符号"
+        hint="自动识别常见导出格式，忽略空行与 <br> 等多余符号"
       />
 
       <div v-if="firstParsed" class="rounded-md bg-surface-container-low/70 border border-outline-variant/30 p-4">

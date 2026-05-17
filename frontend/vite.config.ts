@@ -5,6 +5,7 @@ import path from 'node:path'
 
 // https://vite.dev/config/
 export default defineConfig({
+  root: __dirname,
   base: '/static/dist/',
   plugins: [vue(), tailwindcss()],
   resolve: {
@@ -26,6 +27,9 @@ export default defineConfig({
     emptyOutDir: true,
     assetsDir: 'assets',
     rollupOptions: {
+      input: {
+        index: 'index.html',
+      },
       output: {
         entryFileNames: 'assets/[name].js',
         chunkFileNames: 'assets/[name].js',

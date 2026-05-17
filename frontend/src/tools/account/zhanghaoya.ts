@@ -7,10 +7,10 @@ export interface ZhanghaoyaConfig extends Record<string, unknown> {
 
 export const zhanghaoyaTool: ToolDefinition<ZhanghaoyaConfig> = {
   id: 'zhanghaoya',
-  name: '账号鸭',
+  name: '第三方账号 API',
   vendor: 'zhanghaoya.com',
   homepage: 'https://www.zhanghaoya.com',
-  description: '通过账号鸭接口批量提取 Hotmail / Outlook 邮箱账号，并支持历史导出与 Token 解析。',
+  description: '当前接入的第三方账号接口，可批量提取 Hotmail / Outlook 账号，并支持历史导出与 Token 解析。',
   category: 'account',
   available: true,
   badge: 'stable',
@@ -31,10 +31,10 @@ export const zhanghaoyaTool: ToolDefinition<ZhanghaoyaConfig> = {
       label: 'API Key',
       type: 'password',
       required: true,
-      placeholder: '在账号鸭后台获取',
+      placeholder: '在第三方账号 API 后台获取',
       mask: true,
       cols: 1,
-      help: '账号鸭后台 → 我的 → API 接入 → 获取 Key',
+      help: '第三方账号 API 后台 → API 接入 → 获取 Key',
     },
   ],
   defaults: {

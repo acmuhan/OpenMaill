@@ -2,7 +2,7 @@
 """Tool 抽象基类。
 
 后端 Tool 模型与前端的 ToolDefinition 一一对应，但行为更具体：
-  - AccountTool：账号源（账号鸭、自定义）
+  - AccountTool：账号源（第三方 API、自定义）
   - MailTool：邮件协议（Outlook / Gmail / IMAP）
 
 每个具体 Tool 类提供：
@@ -47,7 +47,7 @@ class BaseTool(ABC):
 
 class AccountTool(BaseTool):
     """账号 API 抽象。
-    config 至少包含 base_url / key（账号鸭兼容协议）。
+    config 至少包含 base_url / key。
     """
 
     @abstractmethod

@@ -36,7 +36,7 @@ function openBackup() {
         </main>
 
         <footer class="text-center text-xs text-on-surface-variant/60 py-4">
-          OpenMail · 模块化邮箱工具套件 · 配置保存在本地浏览器
+          OpenMail · A Mail Manger Tools
         </footer>
       </div>
     </div>
