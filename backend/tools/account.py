@@ -36,10 +36,10 @@ def _request_json(base_url: str, path: str, params: dict[str, Any], timeout: int
 class ZhanghaoyaAccountTool(AccountTool):
     definition = ToolDefinition(
         id="zhanghaoya",
-        name="第三方账号 API",
+        name="账号鸭协议",
         category="account",
         vendor="zhanghaoya",
-        description="当前接入的第三方账号购买、余额和历史接口。",
+        description="当前已接入的账号鸭账号购买、余额和历史接口协议。",
         fields=[
             {"id": "base_url", "name": "API 服务器地址", "type": "url", "required": True},
             {"id": "key", "name": "API Key", "type": "password", "required": True},
@@ -68,10 +68,10 @@ class ZhanghaoyaAccountTool(AccountTool):
 class CustomAccountTool(ZhanghaoyaAccountTool):
     definition = ToolDefinition(
         id="custom-account",
-        name="自定义账号源",
+        name="自定义 API 请求",
         category="account",
         vendor="custom",
-        description="自定义第三方账号 API，支持自定义路径、参数名与响应字段。",
+        description="自定义账号源请求渠道，支持配置路径、参数名、响应字段和账号分隔符。",
         fields=[
             {"id": "base_url", "name": "API 服务器地址", "type": "url", "required": True},
             {"id": "key", "name": "API Key", "type": "password", "required": True},

@@ -21,8 +21,8 @@ export interface CustomAccountConfig extends Record<string, unknown> {
  */
 export const customAccountTool: ToolDefinition<CustomAccountConfig> = {
   id: 'custom-account',
-  name: '自定义账号 API',
-  description: '可配置路径、参数名和响应字段，用于适配不同第三方卡商 API。',
+  name: '自定义 API 请求',
+  description: '可配置路径、参数名、响应字段和账号分隔符，用于适配不同账号源请求渠道。',
   category: 'account',
   available: true,
   badge: 'stable',

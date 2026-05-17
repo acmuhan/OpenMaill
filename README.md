@@ -1,13 +1,13 @@
-# OpenImage Mail Console
+# OpenMail Mail Console
 
-一个小型 Flask + Vue 工具，用于第三方账号 API 接入、历史记录查询，以及通过 OAuth2 读取邮箱邮件。后端提供账号源、邮件读取和工具 API，前端是构建到 `static/dist` 的单页应用。
+一个小型 Flask + Vue 工具，用于账号鸭协议接入、自定义 API 请求渠道、历史记录查询，以及通过 OAuth2 / IMAP 读取邮箱邮件。后端提供账号源、邮件读取和工具 API，前端是构建到 `static/dist` 的单页应用。
 
 ## 功能
 
-- 配置第三方账号 API 地址和密钥，调用兼容账号购买/历史/余额的接口。
+- 配置账号鸭协议或自定义 API 请求渠道，调用账号购买/历史/余额接口。
 - 支持购买账号、查询购买历史，并兼容 `----` 与冒号分隔的账号/历史格式。
-- 使用 Microsoft OAuth2 refresh token 获取 access token。
-- 通过 Microsoft Graph 读取 Outlook/Hotmail 邮件。
+- 使用 Microsoft / Google OAuth2 refresh token 获取 access token。
+- 通过 Microsoft Graph、Gmail REST API 或标准 IMAP 读取邮件。
 - 提供 Vue 前端界面和 Flask API。
 
 ## 目录结构

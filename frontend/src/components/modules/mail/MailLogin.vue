@@ -24,7 +24,7 @@ const tabs = computed(() =>
     return {
       value: i.id,
       label: i.name,
-      badge: tool?.available ? undefined : '预留',
+      badge: tool?.available ? undefined : '未启用',
       disabled: false,
     }
   }),
@@ -42,8 +42,8 @@ function setField(key: string, value: unknown) {
 }
 
 async function fetchToken() {
-  if (!available.value) {
-    toast.warn('当前邮箱协议尚未上线（预留）')
+  if (!activeMail.value) {
+    toast.warn('请先选择邮箱实例')
     return
   }
   tokenLoading.value = true
@@ -54,7 +54,7 @@ async function fetchToken() {
 }
 
 async function fetchEmails() {
-  if (!available.value) return toast.warn('当前邮箱协议尚未上线')
+  if (!activeMail.value) return toast.warn('请先选择邮箱实例')
   if (!accessToken.value) return toast.error('请先获取 Access Token')
   mailLoading.value = true
   const r = await mailService.listEmails(activeMail.value)
@@ -104,20 +104,6 @@ async function copyToken() {
       </div>
 
       <template v-else>
-        <!-- 不可用协议提示 -->
-        <div
-          v-if="!available"
-          class="rounded-md bg-tertiary-fixed/40 border border-tertiary/20 p-5 flex gap-3"
-        >
-          <svg class="w-5 h-5 text-on-tertiary-fixed shrink-0 mt-0.5" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.732 0 2.815-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126Z" />
-          </svg>
-          <div class="flex flex-col gap-1 text-sm text-on-tertiary-fixed/90">
-            <strong class="text-on-tertiary-fixed text-base">{{ currentTool?.name }} 接入预留</strong>
-            <p>{{ currentTool?.description }}</p>
-          </div>
-        </div>
-
         <!-- 动态表单：从 Tool fields 自动渲染 -->
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <div

@@ -25,10 +25,10 @@ class NotFoundError(OpenMailError):
 
 
 class NotAvailableError(OpenMailError):
-    """功能预留中。"""
+    """功能未启用。"""
     status_code = 501
 
 
 class UpstreamError(OpenMailError):
-    """上游 API（第三方账号 API / Microsoft Graph / Gmail 等）失败。"""
+    """上游 API（账号鸭协议 / Microsoft Graph / Gmail 等）失败。"""
     status_code = 502

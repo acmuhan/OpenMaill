@@ -154,7 +154,7 @@ function badgeVariant(inst: ToolInstance) {
                 <BaseChip :variant="badgeVariant(inst)" size="sm">
                   {{ getTool(inst.toolId)?.name || '未知' }}
                 </BaseChip>
-                <BaseChip v-if="!getTool(inst.toolId)?.available" variant="warning" size="sm">预留</BaseChip>
+                <BaseChip v-if="!getTool(inst.toolId)?.available" variant="warning" size="sm">未启用</BaseChip>
                 <BaseChip v-if="!inst.enabled" variant="neutral" size="sm">已禁用</BaseChip>
                 <BaseChip v-if="inst.state?.balance" variant="success" size="sm">余额 {{ inst.state.balance }}</BaseChip>
               </div>
@@ -240,7 +240,7 @@ function badgeVariant(inst: ToolInstance) {
           <BaseIcon :name="tool.icon || 'tool'" size="sm" />
           <span class="text-base font-semibold text-on-surface">{{ tool.name }}</span>
           <BaseChip :variant="tool.available ? 'success' : 'warning'" size="sm">
-            {{ tool.available ? '可用' : '预留' }}
+            {{ tool.available ? '可用' : '未启用' }}
           </BaseChip>
         </div>
         <p class="text-xs text-on-surface-variant/80 leading-relaxed">{{ tool.description }}</p>

@@ -1,7 +1,7 @@
 {
-  "name": "OpenImage",
-  "short_name": "OpenImage",
-  "description": "OpenImage - modular mail console",
+  "name": "OpenMail",
+  "short_name": "OpenMail",
+  "description": "OpenMail - modular mail console",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",

@@ -109,7 +109,7 @@ function clearInput() {
 <template>
   <BaseCard
     title="账号串 / Token 工具栏"
-    subtitle="粘贴第三方账号 API 导出的账号串，一键解析并填入当前 Outlook 实例"
+    subtitle="粘贴账号鸭协议导出的账号串，一键解析并填入当前 Outlook 实例"
     padding="lg"
     elevation="lifted"
   >

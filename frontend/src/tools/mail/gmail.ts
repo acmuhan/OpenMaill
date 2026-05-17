@@ -12,10 +12,10 @@ export const gmailTool: ToolDefinition<GmailConfig> = {
   name: 'Gmail',
   vendor: 'Google',
   homepage: 'https://developers.google.com/gmail/api',
-  description: '按 Google 官方 OAuth2 + Gmail API 协议准备字段；后端 /api/gmail/* 端点预留。',
+  description: '按 Google OAuth2 + Gmail REST API 协议读取邮件，支持 Refresh Token 换取 Access Token。',
   category: 'mail',
-  available: false,
-  badge: 'preview',
+  available: true,
+  badge: 'stable',
   icon: 'gmail',
   primaryColor: '#ea4335',
   fields: [

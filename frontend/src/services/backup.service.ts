@@ -51,7 +51,7 @@ export const backupService = {
   apply(input: unknown, mode: 'replace' | 'merge' = 'merge'): number {
     if (!input || typeof input !== 'object') throw new Error('无效的备份内容')
     const b = input as Partial<BackupBundle>
-    if (!b.__openmail__) throw new Error('不是 OpenImage 备份文件')
+    if (!b.__openmail__) throw new Error('不是 OpenMail 备份文件')
 
     // v2 直接读取；v1 在 providers store 启动时已经迁移过，这里只处理 v2 字段
     const list = Array.isArray(b.instances) ? b.instances : []

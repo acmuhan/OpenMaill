@@ -54,7 +54,7 @@ function bootstrap(): ToolInstance[] {
   const saved = loadJson<ToolInstance[] | null>(KEY_INSTANCES, null)
   if (Array.isArray(saved) && saved.length) {
     for (const item of saved) {
-      if (item.toolId === 'zhanghaoya' && item.name === LEGACY_ZHANGHAOYA_NAME) item.name = '第三方账号 API'
+      if (item.toolId === 'zhanghaoya' && item.name === LEGACY_ZHANGHAOYA_NAME) item.name = '账号鸭协议'
     }
     // 修补：旧存档若没有 mail 实例，补一个 Outlook 默认实例
     if (!saved.some((i) => getTool(i.toolId)?.category === 'mail')) {
@@ -76,7 +76,7 @@ function bootstrap(): ToolInstance[] {
     {
       id: 'zhanghaoya-default',
       toolId: 'zhanghaoya',
-      name: '第三方账号 API',
+      name: '账号鸭协议',
       config: {
         base_url: (d.base_url || 'https://www.zhanghaoya.com').replace(/\/+$/, ''),
         key: d.key || '',

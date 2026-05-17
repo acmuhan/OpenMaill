@@ -3,45 +3,31 @@ import { accessToken, currentMail, currentMailbox, currentMailId, emails, prefs,
 import type { ToolInstance } from '@/tools'
 import { getTool } from '@/tools'
 
-interface OutlookCfg {
-  email: string
-  client_id: string
-  refresh_token: string
+function readMailCfg(inst: ToolInstance): Record<string, unknown> {
+  return { ...(inst.config || {}) }
 }
 
-function readOutlookCfg(inst: ToolInstance): OutlookCfg | null {
-  const c = inst.config as Partial<OutlookCfg>
-  if (!c.email || !c.client_id || !c.refresh_token) return null
-  return { email: c.email, client_id: c.client_id, refresh_token: c.refresh_token }
-}
-
-function isOutlook(inst: ToolInstance | null): inst is ToolInstance {
-  if (!inst) return false
+function requireMailInst(inst: ToolInstance | null) {
+  if (!inst) return { ok: false as const, error: '请先在「供应商」中添加邮箱实例' }
   const tool = getTool(inst.toolId)
-  return tool?.id === 'outlook' && tool.available === true
+  if (!tool || tool.category !== 'mail') return { ok: false as const, error: '当前实例不是邮箱协议' }
+  if (!tool.available) return { ok: false as const, error: '当前邮箱协议未启用' }
+  return { ok: true as const, tool }
 }
 
 export const mailService = {
-  /**
-   * 用当前 mail Tool 的 config 换取 access_token。
-   * 目前仅 Outlook 可用，Gmail / IMAP 为预留。
-   */
   async fetchToken(inst: ToolInstance | null) {
-    if (!inst) return { ok: false as const, error: '请先在「供应商」中添加邮箱实例' }
-    if (!getTool(inst.toolId)?.available) {
-      return { ok: false as const, error: '当前邮箱协议尚未上线（预留）' }
-    }
-    if (!isOutlook(inst)) {
-      return { ok: false as const, error: '该协议的 Token 流程尚未实现' }
-    }
-    const cfg = readOutlookCfg(inst)
-    if (!cfg) return { ok: false as const, error: '请填写邮箱、Client ID、Refresh Token' }
+    const ready = requireMailInst(inst)
+    if (!ready.ok) return ready
+    const mailInst = inst as ToolInstance
+    const cfg = readMailCfg(mailInst)
+    if (!cfg) return { ok: false as const, error: '邮箱配置不完整' }
 
     tokenState.value = 'pending'
-    const r = await api.token(cfg.refresh_token, cfg.client_id)
+    const r = await api.mailToken({ tool: mailInst.toolId, ...cfg })
     if (r.ok && r.access_token) {
       accessToken.value = r.access_token
-      currentMailbox.value = cfg.email
+      currentMailbox.value = String(cfg.email || '')
       tokenState.value = 'ready'
       return { ok: true as const, access_token: r.access_token }
     }
@@ -51,12 +37,19 @@ export const mailService = {
   },
 
   async listEmails(inst: ToolInstance | null) {
-    if (!isOutlook(inst)) return { ok: false as const, error: '当前邮箱协议尚未上线' }
+    const ready = requireMailInst(inst)
+    if (!ready.ok) return ready
+    const mailInst = inst as ToolInstance
     if (!accessToken.value) return { ok: false as const, error: '请先获取 Access Token' }
-    const cfg = readOutlookCfg(inst)
-    if (!cfg) return { ok: false as const, error: '邮箱配置不完整' }
+    const cfg = readMailCfg(mailInst)
 
-    const r = await api.emails(cfg.email, accessToken.value, prefs.value.folder, prefs.value.limit)
+    const r = await api.mailEmails({
+      tool: mailInst.toolId,
+      access_token: accessToken.value,
+      folder: prefs.value.folder,
+      limit: prefs.value.limit,
+      ...cfg,
+    })
     if (r.ok) {
       emails.value = r.emails
       return { ok: true as const, emails: r.emails }
@@ -65,13 +58,19 @@ export const mailService = {
   },
 
   async openEmail(inst: ToolInstance | null, mailId: string) {
-    if (!isOutlook(inst)) return { ok: false as const, error: '当前邮箱协议尚未上线' }
+    const ready = requireMailInst(inst)
+    if (!ready.ok) return ready
+    const mailInst = inst as ToolInstance
     if (!accessToken.value) return { ok: false as const, error: '请先获取 Access Token' }
-    const cfg = readOutlookCfg(inst)
-    if (!cfg) return { ok: false as const, error: '邮箱配置不完整' }
+    const cfg = readMailCfg(mailInst)
 
     currentMailId.value = mailId
-    const r = await api.emailBody(cfg.email, accessToken.value, mailId)
+    const r = await api.mailBody({
+      tool: mailInst.toolId,
+      access_token: accessToken.value,
+      mail_id: mailId,
+      ...cfg,
+    })
     if (r.ok) {
       currentMail.value = { subject: r.subject, from: r.from, date: r.date, body: r.body }
       return { ok: true as const, mail: r }

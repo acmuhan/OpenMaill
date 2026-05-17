@@ -65,6 +65,10 @@ export const api = {
     })
   },
 
+  mailToken(payload: Record<string, unknown>) {
+    return postJson<{ access_token: string; expires_in?: number; token_type?: string }>('/api/token', payload)
+  },
+
   emails(email: string, access_token: string, folder: string, limit: number) {
     return postJson<{ emails: EmailItem[] }>('/api/emails', {
       email,
@@ -74,11 +78,19 @@ export const api = {
     })
   },
 
+  mailEmails(payload: Record<string, unknown>) {
+    return postJson<{ emails: EmailItem[] }>('/api/emails', payload)
+  },
+
   emailBody(email: string, access_token: string, mail_id: string) {
     return postJson<EmailBody>('/api/email/body', {
       email,
       access_token,
       mail_id,
     })
+  },
+
+  mailBody(payload: Record<string, unknown>) {
+    return postJson<EmailBody>('/api/email/body', payload)
   },
 }

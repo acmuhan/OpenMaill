@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed } from 'vue'
-import { BaseCard, BaseButton, BaseChip } from '@/components/ui'
+import { BaseCard, BaseButton, BaseChip, BaseIcon } from '@/components/ui'
 import WorkflowToolbar from '@/components/modules/workflow/WorkflowToolbar.vue'
 import { navigate } from '@/stores/ui.store'
 import { activeAccount, activeMail, mailInstances, accountInstances } from '@/stores/providers.store'
@@ -12,21 +12,21 @@ const quickStats = computed(() => [
     label: '账号源',
     value: accountInstances.value.length,
     hint: activeAccount.value?.name || '未配置',
-    icon: 'M15.75 6a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0ZM4.501 20.118a7.5 7.5 0 0 1 14.998 0A17.933 17.933 0 0 1 12 21.75c-2.676 0-5.216-.584-7.499-1.632Z',
+    iconName: 'account',
     route: 'accounts' as const,
   },
   {
     label: '邮箱协议',
     value: mailInstances.value.length,
     hint: activeMail.value?.name || '未配置',
-    icon: 'M21.75 6.75v10.5a2.25 2.25 0 0 1-2.25 2.25h-15a2.25 2.25 0 0 1-2.25-2.25V6.75',
+    iconName: 'mail',
     route: 'mail' as const,
   },
   {
     label: '收件箱',
     value: emails.value.length,
     hint: tokenState.value === 'ready' ? 'Token 已就绪' : 'Token 未就绪',
-    icon: 'M2.25 13.5h3.86a2.25 2.25 0 0 1 2.012 1.244l.256.512a2.25 2.25 0 0 0 2.013 1.244h3.218a2.25 2.25 0 0 0 2.013-1.244l.256-.512a2.25 2.25 0 0 1 2.013-1.244h3.859',
+    iconName: 'inbox',
     route: 'mail' as const,
   },
 ])
@@ -54,9 +54,7 @@ const availableTools = computed(() => {
       <div class="flex items-center justify-between">
         <span class="text-xs uppercase tracking-wider text-on-surface-variant/70 font-semibold">{{ s.label }}</span>
         <div class="w-10 h-10 rounded-full bg-primary-fixed/60 text-primary flex items-center justify-center">
-          <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" :d="s.icon" />
-          </svg>
+          <BaseIcon :name="s.iconName" size="sm" />
         </div>
       </div>
       <div class="flex items-baseline gap-2">
@@ -80,18 +78,13 @@ const availableTools = computed(() => {
         class="text-left flex items-start gap-3 p-4 rounded-2xl bg-surface-container-low/50 hover:bg-primary-fixed/30 transition-colors"
       >
         <div class="w-10 h-10 rounded-2xl bg-primary text-on-primary flex items-center justify-center shrink-0 shadow-[0_4px_16px_rgba(0,61,155,0.2)]">
-          <svg v-if="x.tool!.category === 'account'" class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 6a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0Z" />
-          </svg>
-          <svg v-else class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" d="M21.75 6.75v10.5a2.25 2.25 0 0 1-2.25 2.25h-15a2.25 2.25 0 0 1-2.25-2.25V6.75" />
-          </svg>
+          <BaseIcon :name="x.tool!.category === 'account' ? 'account' : 'mail'" size="sm" />
         </div>
         <div class="flex-1 min-w-0 flex flex-col gap-1">
           <div class="flex items-center gap-2 flex-wrap">
             <span class="text-sm font-semibold text-on-surface truncate">{{ x.inst.name }}</span>
             <BaseChip :variant="x.tool!.available ? 'success' : 'warning'" size="sm">
-              {{ x.tool!.available ? '可用' : '预留' }}
+              {{ x.tool!.available ? '可用' : '未启用' }}
             </BaseChip>
             <BaseChip v-if="!x.inst.enabled" variant="neutral" size="sm">已禁用</BaseChip>
           </div>
