@@ -10,22 +10,27 @@ export interface OtpHit {
   code: string
   /** 命中上下文片段（首次出现的位置 ±40 字） */
   context: string
-  /** 命中来源：text / html / heuristic */
-  source: 'keyword' | 'pattern' | 'heuristic'
+  /** 命中来源：关键词 / 结构化标签 / 模式 / 启发式 */
+  source: 'keyword' | 'structured' | 'pattern' | 'heuristic'
   confidence: number // 0-1
 }
 
 const KEYWORDS = [
-  '验证码', '动态码', '校验码', '驗證碼', '验证代码',
+  '验证码', '动态码', '校验码', '驗證碼', '验证代码', '安全代码', '安全码', '一次性代码', '一次性密码',
+  '驗證代碼', '認證碼', '確認碼', '登录代码', '登入代码',
   'verification code', 'verify code', 'security code',
   'one[- ]?time password', 'one[- ]?time code',
   'otp', 'auth code', 'access code', 'confirmation code',
-  'pin', 'code is', 'your code',
+  'login code', 'sign[- ]?in code', 'two[- ]?factor code',
+  'pin', 'code is', 'your code', 'use code', 'enter code',
 ]
 
-const KEYWORD_RE = new RegExp(`(?:${KEYWORDS.join('|')})[^A-Za-z0-9]{0,32}([A-Za-z0-9]{4,10})`, 'gi')
-const ENG_DIGIT_RE = /\b(\d{4,8})\b/g
-const ALPHA_DIGIT_RE = /\b([A-Z0-9]{5,8})\b/g
+const KEYWORD_RE = new RegExp(`(?:${KEYWORDS.join('|')})[^A-Za-z0-9\\u4e00-\\u9fa5]{0,48}([A-Za-z0-9][A-Za-z0-9\\s-]{2,18}[A-Za-z0-9])`, 'gi')
+const LABELED_RE = /\b(?:code|otp|pin)\s*[:：#-]?\s*([A-Za-z0-9][A-Za-z0-9\s-]{2,18}[A-Za-z0-9])\b/gi
+const ENG_DIGIT_RE = /\b(\d[\d\s-]{2,14}\d)\b/g
+const ALPHA_DIGIT_RE = /\b([A-Z0-9][A-Z0-9 -]{3,16}[A-Z0-9])\b/g
+const REJECT_CONTEXT_RE = /(order|invoice|ticket|phone|mobile|tel|amount|price|total|tracking|zip|postal|订单|金额|电话|手机号|工单|发票|快递|邮编)/i
+const REJECT_CODE_RE = /^(?:0000+|1111+|1234(?:56|5678)?|9999+)$/
 
 /**
  * 从邮件正文中尝试提取验证码。返回置信度最高的若干候选。
@@ -36,17 +41,36 @@ export function extractOtp(rawText: string, max = 3): OtpHit[] {
   const hits: OtpHit[] = []
   const seen = new Set<string>()
 
-  function pushHit(code: string, idx: number, source: OtpHit['source'], confidence: number) {
+  function normalizeCode(code: string): string {
+    const cleaned = code.replace(/[\s-]/g, '').trim()
+    return /[a-z]/.test(cleaned) ? cleaned.toUpperCase() : cleaned
+  }
+
+  function penalty(code: string, context: string): number {
+    let value = 0
+    if (REJECT_CONTEXT_RE.test(context)) value += 0.28
+    if (REJECT_CODE_RE.test(code)) value += 0.2
+    if (/^(19|20)\d{2}$/.test(code)) value += 0.35
+    if (/^\d{9,}$/.test(code)) value += 0.25
+    return value
+  }
+
+  function pushHit(rawCode: string, idx: number, source: OtpHit['source'], confidence: number) {
+    const code = normalizeCode(rawCode)
     if (!code || seen.has(code)) return
-    if (!/[A-Za-z0-9]/.test(code)) return
-    seen.add(code)
+    if (!/^[A-Z0-9]{4,10}$/.test(code)) return
+    if (/^[A-Z]+$/.test(code)) return
     const start = Math.max(0, idx - 40)
     const end = Math.min(text.length, idx + code.length + 40)
+    const context = text.slice(start, end).trim()
+    const adjusted = Math.max(0.1, confidence - penalty(code, context))
+    if (adjusted < 0.45) return
+    seen.add(code)
     hits.push({
       code,
       source,
-      confidence,
-      context: text.slice(start, end).trim(),
+      confidence: adjusted,
+      context,
     })
   }
 
@@ -55,20 +79,25 @@ export function extractOtp(rawText: string, max = 3): OtpHit[] {
     pushHit(match[1], match.index ?? 0, 'keyword', 0.95)
   }
 
-  // 2) 大写字母+数字的 5-8 位组合（典型 OTP 形式：XK9F4Q）
+  // 2) 常见英文结构化标签：Code: 123456 / OTP # 842901
+  for (const match of text.matchAll(LABELED_RE)) {
+    pushHit(match[1], match.index ?? 0, 'structured', 0.88)
+  }
+
+  // 3) 大写字母+数字的 5-8 位组合（典型 OTP 形式：XK9F4Q）
   if (hits.length < max) {
     for (const match of text.matchAll(ALPHA_DIGIT_RE)) {
-      const code = match[1]
+      const code = normalizeCode(match[1])
       if (!/\d/.test(code) || !/[A-Z]/.test(code)) continue // 必须含字母+数字
       pushHit(code, match.index ?? 0, 'pattern', 0.7)
       if (hits.length >= max) break
     }
   }
 
-  // 3) 纯数字 4-8 位（最后才考虑，且需要"独立"于上下文）
+  // 4) 纯数字 4-8 位（最后才考虑，且需要"独立"于上下文）
   if (hits.length < max) {
     for (const match of text.matchAll(ENG_DIGIT_RE)) {
-      const code = match[1]
+      const code = normalizeCode(match[1])
       // 排除明显是年份 / 邮编 / 价格
       if (/^(19|20)\d{2}$/.test(code)) continue
       pushHit(code, match.index ?? 0, 'heuristic', 0.55)

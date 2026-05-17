@@ -11,7 +11,7 @@ export interface AccountConfig {
 function asCfg(inst: ToolInstance): AccountConfig | null {
   const cfg = inst.config as Partial<AccountConfig>
   if (!cfg.base_url || !cfg.key) return null
-  return { base_url: cfg.base_url, key: cfg.key }
+  return { ...(inst.config as Record<string, unknown>), base_url: cfg.base_url, key: cfg.key } as AccountConfig
 }
 
 function ensureUsable(inst: ToolInstance | null): { ok: false; error: string } | { ok: true; cfg: AccountConfig } {
@@ -33,7 +33,7 @@ export const accountService = {
   async balance(inst: ToolInstance) {
     const guard = ensureUsable(inst)
     if (!guard.ok) return { ok: false as const, error: guard.error }
-    const r = await api.balance(guard.cfg)
+    const r = await api.balance(guard.cfg, inst.toolId)
     if (r.ok) {
       setInstanceState(inst.id, { balance: r.balance, lastUsedAt: Date.now() })
       return { ok: true as const, balance: r.balance }
@@ -45,7 +45,7 @@ export const accountService = {
   async accounts(inst: ToolInstance, type: string, quantity: number) {
     const guard = ensureUsable(inst)
     if (!guard.ok) return { ok: false as const, error: guard.error }
-    const r = await api.accounts(guard.cfg, type, quantity)
+    const r = await api.accounts(guard.cfg, type, quantity, inst.toolId)
     if (r.ok) {
       setInstanceState(inst.id, { lastUsedAt: Date.now() })
       return { ok: true as const, accounts: r.accounts }
@@ -56,7 +56,7 @@ export const accountService = {
   async history(inst: ToolInstance, type: string) {
     const guard = ensureUsable(inst)
     if (!guard.ok) return { ok: false as const, error: guard.error }
-    const r = await api.history(guard.cfg, type)
+    const r = await api.history(guard.cfg, type, inst.toolId)
     if (r.ok) {
       setInstanceState(inst.id, { lastUsedAt: Date.now() })
       return { ok: true as const, raw: r.data }

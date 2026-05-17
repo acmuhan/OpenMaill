@@ -1,8 +1,7 @@
-@import url('https://rsms.me/inter/inter.css');
 @import "tailwindcss";
 
 @theme {
-  --font-sans: 'Inter', system-ui, sans-serif;
+  --font-sans: "Noto Sans SC", "Microsoft YaHei UI", "PingFang SC", "Segoe UI", system-ui, sans-serif;
 
   --color-surface: #f7f9fb;
   --color-surface-dim: #d8dadc;
@@ -69,7 +68,7 @@
 
 @layer base {
   :root {
-    font-family: 'Inter', system-ui, sans-serif;
+    font-family: "Noto Sans SC", "Microsoft YaHei UI", "PingFang SC", "Segoe UI", system-ui, sans-serif;
     font-feature-settings: 'cv02', 'cv03', 'cv04', 'cv11';
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
@@ -77,25 +76,55 @@
     background: var(--color-surface);
   }
 
+  :root[data-theme='dark'] {
+    color-scheme: dark;
+    --color-surface: #0f141b;
+    --color-surface-dim: #0b1017;
+    --color-surface-bright: #242b35;
+    --color-surface-container-lowest: #131922;
+    --color-surface-container-low: #18202a;
+    --color-surface-container: #1d2632;
+    --color-surface-container-high: #26313f;
+    --color-surface-container-highest: #303c4b;
+    --color-on-surface: #edf2f7;
+    --color-on-surface-variant: #b9c2d0;
+    --color-inverse-surface: #edf2f7;
+    --color-inverse-on-surface: #18202a;
+    --color-outline: #8994a5;
+    --color-outline-variant: #3b4656;
+    --color-background: #0f141b;
+    --color-on-background: #edf2f7;
+    --color-surface-variant: #25303d;
+    --color-secondary: #b7c8e1;
+    --color-on-secondary: #142033;
+    --color-secondary-container: #26364d;
+    --color-on-secondary-container: #d3e4fe;
+    --color-tertiary: #ffb59b;
+    --color-on-tertiary: #4f1600;
+    --color-tertiary-container: #6b2200;
+    --color-on-tertiary-container: #ffdbcf;
+    --color-error: #ffb4ab;
+    --color-on-error: #690005;
+    --color-error-container: #93000a;
+    --color-on-error-container: #ffdad6;
+  }
+
   body {
     margin: 0;
     min-height: 100vh;
-    background: linear-gradient(180deg, #f7f9fb 0%, #eef1f5 100%);
+    background:
+      radial-gradient(circle at 0 0, color-mix(in srgb, var(--color-primary) 12%, transparent), transparent 30rem),
+      linear-gradient(180deg, var(--color-surface) 0%, var(--color-surface-container-low) 100%);
     background-attachment: fixed;
   }
 
   h1, h2, h3, h4, h5, h6 {
     color: var(--color-on-surface);
-    font-family: 'Inter', sans-serif;
+    font-family: "Noto Sans SC", "Microsoft YaHei UI", "PingFang SC", "Segoe UI", system-ui, sans-serif;
   }
 
-  select {
-    appearance: none;
-    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3E%3Cpath stroke='%23434654' stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='m6 8 4 4 4-4'/%3E%3C/svg%3E");
-    background-repeat: no-repeat;
-    background-position: right 1rem center;
-    background-size: 1.1rem;
-    padding-right: 2.5rem;
+  code, pre, textarea, input[type='password'] {
+    font-family: ui-monospace, "Cascadia Mono", Consolas, "SFMono-Regular", Menlo, monospace;
   }
 }
 

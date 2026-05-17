@@ -13,7 +13,10 @@ def _account_config(body: dict[str, Any]) -> dict[str, Any]:
         raise ValidationError("请填写 API 服务器地址")
     if not key:
         raise ValidationError("请填写 API Key")
-    return {"base_url": base_url, "key": key}
+    config = dict(body)
+    config["base_url"] = base_url
+    config["key"] = key
+    return config
 
 
 class AccountService:

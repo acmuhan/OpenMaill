@@ -44,7 +44,7 @@ defineEmits<{
         'w-full px-5 py-3 rounded-md bg-surface-container-lowest text-on-surface',
         'placeholder:text-on-surface-variant/50 text-sm leading-relaxed',
         'border border-outline-variant/60 transition-all duration-200',
-        'focus:outline-none focus:border-primary focus:ring-4 focus:ring-primary/15 focus:bg-white',
+        'focus:outline-none focus:border-primary focus:ring-4 focus:ring-primary/15 focus:bg-surface-container-lowest',
         'disabled:opacity-60 disabled:cursor-not-allowed resize-y font-mono text-xs',
         readonly && 'bg-surface-container-low/50',
       ]"

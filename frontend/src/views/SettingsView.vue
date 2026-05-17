@@ -5,13 +5,16 @@ import {
   BaseButton,
   BaseSwitch,
   BaseChip,
+  BaseRadioGroup,
   BaseFileUpload,
   BaseDivider,
   BaseTextarea,
+  BaseInput,
 } from '@/components/ui'
 import { prefs } from '@/stores/mail.store'
 import { backupService } from '@/services/backup.service'
 import { useToast } from '@/stores/toast.store'
+import { theme, accent } from '@/stores/ui.store'
 
 const toast = useToast()
 const importing = ref(false)
@@ -85,6 +88,30 @@ function clearLocal() {
         <div class="rounded-md bg-surface-container-low/60 p-4 text-xs text-on-surface-variant/80 leading-relaxed">
           <strong class="text-on-surface">关于安全：</strong>
           即使开启 HTML 渲染，OpenMail 仍会自动 <em>移除 &lt;script&gt;、所有 on* 事件</em>，并把链接强制设为 <code>target="_blank"</code> + <code>rel="noopener noreferrer"</code>。
+        </div>
+      </div>
+    </BaseCard>
+
+    <BaseCard title="外观" subtitle="主题、暗色模式与品牌色" elevation="soft">
+      <div class="flex flex-col gap-5">
+        <BaseRadioGroup
+          v-model="theme"
+          label="主题模式"
+          name="theme-mode"
+          :options="[
+            { label: '浅色', value: 'light', description: '固定浅色外观' },
+            { label: '深色', value: 'dark', description: '固定深色外观' },
+            { label: '跟随系统', value: 'auto', description: '随系统明暗变化' },
+          ]"
+        />
+        <BaseInput
+          v-model="accent"
+          type="color"
+          label="主题色"
+          hint="影响按钮、选中态和高亮色"
+        />
+        <div class="rounded-md bg-surface-container-low/60 p-4 text-xs text-on-surface-variant/80 leading-relaxed">
+          颜色、深色和浅色会同步写入本地设置，刷新后保留。
         </div>
       </div>
     </BaseCard>

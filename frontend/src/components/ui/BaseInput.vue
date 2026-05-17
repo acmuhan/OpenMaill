@@ -48,7 +48,7 @@ defineEmits<{
           'w-full h-12 px-5 rounded-full bg-surface-container-lowest text-on-surface',
           'placeholder:text-on-surface-variant/50 text-sm leading-relaxed',
           'border border-outline-variant/60 transition-all duration-200',
-          'focus:outline-none focus:border-primary focus:ring-4 focus:ring-primary/15 focus:bg-white',
+          'focus:outline-none focus:border-primary focus:ring-4 focus:ring-primary/15 focus:bg-surface-container-lowest',
           'disabled:opacity-60 disabled:cursor-not-allowed',
           'read-only:bg-surface-container-low/50',
           error ? '!border-error focus:!ring-error/15' : '',

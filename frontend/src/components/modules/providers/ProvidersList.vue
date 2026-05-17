@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
-import { BaseCard, BaseButton, BaseChip, BaseField, BaseModal, BaseTabs, BaseSwitch } from '@/components/ui'
+import { BaseCard, BaseButton, BaseChip, BaseField, BaseModal, BaseTabs, BaseSwitch, BaseInput, BaseIcon } from '@/components/ui'
 import {
   instances,
   activeAccountId,
@@ -13,7 +13,7 @@ import {
 } from '@/stores/providers.store'
 import { getTool, getAccountTools, getMailTools } from '@/tools'
 import type { ToolCategory, ToolInstance } from '@/tools'
-import { api } from '@/api'
+import { accountService } from '@/services/account.service'
 import { useToast } from '@/stores/toast.store'
 
 const toast = useToast()
@@ -31,9 +31,20 @@ const filtered = computed<ToolInstance[]>(() =>
 )
 
 const toolPickerOpen = ref(false)
+const toolSearch = ref('')
 const toolPickerCategory = computed(() =>
   tab.value === 'account' ? getAccountTools() : getMailTools(),
 )
+const toolPickerResults = computed(() => {
+  const q = toolSearch.value.trim().toLowerCase()
+  return toolPickerCategory.value.filter((tool) => {
+    if (!q) return true
+    return [tool.name, tool.description, tool.vendor || '', tool.id]
+      .join(' ')
+      .toLowerCase()
+      .includes(q)
+  })
+})
 
 function pickAndCreate(toolId: string) {
   const inst = createInstance(toolId)
@@ -72,7 +83,7 @@ async function checkBalance(inst: ToolInstance) {
     return
   }
   checking.value[inst.id] = true
-  const d = await api.balance({ base_url: cfg.base_url, key: cfg.key })
+  const d = await accountService.balance(inst)
   checking.value[inst.id] = false
   if (d.ok) {
     setInstanceState(inst.id, { balance: d.balance, lastUsedAt: Date.now() })
@@ -105,9 +116,7 @@ function badgeVariant(inst: ToolInstance) {
   >
     <template #actions>
       <BaseButton variant="primary" size="sm" @click="toolPickerOpen = true">
-        <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.4" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
-        </svg>
+        <BaseIcon name="plug" size="sm" />
         新增实例
       </BaseButton>
     </template>
@@ -215,14 +224,20 @@ function badgeVariant(inst: ToolInstance) {
 
   <!-- 选择 Tool 模态框 -->
   <BaseModal v-model="toolPickerOpen" title="选择要添加的 Tool" size="lg">
+    <BaseInput
+      v-model="toolSearch"
+      label="搜索邮箱协议或账号源"
+      placeholder="输入名称、厂商或关键字"
+    />
     <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
       <button
-        v-for="tool in toolPickerCategory"
+        v-for="tool in toolPickerResults"
         :key="tool.id"
         @click="pickAndCreate(tool.id)"
         class="text-left flex flex-col gap-2 p-5 rounded-2xl border border-outline-variant/40 hover:border-primary hover:bg-primary-fixed/30 transition-all"
       >
         <div class="flex items-center gap-2 flex-wrap">
+          <BaseIcon :name="tool.icon || 'tool'" size="sm" />
           <span class="text-base font-semibold text-on-surface">{{ tool.name }}</span>
           <BaseChip :variant="tool.available ? 'success' : 'warning'" size="sm">
             {{ tool.available ? '可用' : '预留' }}
@@ -233,6 +248,9 @@ function badgeVariant(inst: ToolInstance) {
           {{ tool.vendor }}
         </span>
       </button>
+      <div v-if="!toolPickerResults.length" class="col-span-full text-sm text-on-surface-variant py-8 text-center">
+        没有找到匹配的协议
+      </div>
     </div>
   </BaseModal>
 </template>

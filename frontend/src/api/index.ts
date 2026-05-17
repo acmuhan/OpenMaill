@@ -46,16 +46,16 @@ async function postJson<T>(url: string, body: Record<string, unknown>): Promise<
 }
 
 export const api = {
-  balance(cfg: Config) {
-    return postJson<{ balance: string }>('/api/balance', { ...cfg })
+  balance(cfg: Config, tool = 'zhanghaoya') {
+    return postJson<{ balance: string }>('/api/balance', { ...cfg, tool })
   },
 
-  accounts(cfg: Config, type: string, quantity: number) {
-    return postJson<{ accounts: Account[] }>('/api/accounts', { ...cfg, type, quantity })
+  accounts(cfg: Config, type: string, quantity: number, tool = 'zhanghaoya') {
+    return postJson<{ accounts: Account[] }>('/api/accounts', { ...cfg, type, quantity, tool })
   },
 
-  history(cfg: Config, type: string) {
-    return postJson<{ data: string }>('/api/history', { ...cfg, type })
+  history(cfg: Config, type: string, tool = 'zhanghaoya') {
+    return postJson<{ data: string }>('/api/history', { ...cfg, type, tool })
   },
 
   token(refresh_token: string, client_id: string) {

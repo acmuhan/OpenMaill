@@ -30,9 +30,9 @@ const elevationClass: Record<string, string> = {
   >
     <header
       v-if="title || $slots.actions || $slots.title"
-      class="flex items-start justify-between gap-4 mb-5"
+      class="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 mb-5"
     >
-      <div class="flex flex-col gap-1">
+      <div class="flex min-w-0 flex-col gap-1">
         <slot name="title">
           <h2 class="text-xl font-semibold tracking-tight text-on-surface">
             {{ title }}
@@ -42,7 +42,7 @@ const elevationClass: Record<string, string> = {
           {{ subtitle }}
         </p>
       </div>
-      <div v-if="$slots.actions" class="flex items-center gap-2 shrink-0">
+      <div v-if="$slots.actions" class="flex items-center gap-2 shrink-0 flex-wrap">
         <slot name="actions" />
       </div>
     </header>
