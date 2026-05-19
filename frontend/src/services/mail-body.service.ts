@@ -1,3 +1,6 @@
+import * as chrono from 'chrono-node'
+import { findPhoneNumbersInText } from 'libphonenumber-js/min'
+
 /**
  * Mail body helpers:
  *  - extractOtp: local heuristic + multi-regex OTP extraction
@@ -213,7 +216,7 @@ function scoreCandidate(candidate: Candidate, text: string, subjectLimit: number
 
   const idx = candidate.index
   const context = sliceContext(text, idx, code.length)
-  if (shouldReject(code, context)) return null
+  if (shouldReject(code, context, text, idx)) return null
 
   let score = candidate.base
   const bonuses: string[] = [`base:${candidate.source}+${candidate.base.toFixed(2)}`]
@@ -269,7 +272,9 @@ function scoreCandidate(candidate: Candidate, text: string, subjectLimit: number
 }
 
 function normalizeCode(code: string): string {
-  const cleaned = code.replace(/[\s-]/g, '').trim()
+  const trimmed = code.trim()
+  const numericPrefix = trimmed.match(/^(\d(?:[\s-]?\d){3,7})(?=\s+[A-Za-z]|[^\d\s-]|$)/)
+  const cleaned = (numericPrefix?.[1] || trimmed).replace(/[\s-]/g, '').trim()
   return /[a-z]/.test(cleaned) ? cleaned.toUpperCase() : cleaned
 }
 
@@ -280,13 +285,15 @@ function isValidCodeShape(code: string): boolean {
   return true
 }
 
-function shouldReject(code: string, context: string): boolean {
+function shouldReject(code: string, context: string, text: string, index: number): boolean {
   if (/^\d{11,}$/.test(code)) return true
   if (/^1[3-9]\d{9}$/.test(code)) return true
   if (/^(19|20)\d{2}$/.test(code)) return true
   if (/^\d{4}[-/]?\d{1,2}[-/]?\d{1,2}$/.test(code)) return true
   if (/^\d{5}(?:-\d{4})?$/.test(code) && /(zip|postal|postcode|邮编|郵編)/i.test(context)) return true
   if (URL_PARAM_CONTEXT_RE.test(context) && /^\d{8,}$/.test(code)) return true
+  if (isInsideParsedDate(text, index, code)) return true
+  if (isInsidePhoneNumber(context, code)) return true
   return false
 }
 
@@ -314,8 +321,37 @@ function scorePenalty(code: string, context: string): { value: number; reasons: 
     value += 0.22
     reasons.push('business-id-context:-0.22')
   }
+  if (isInsidePhoneNumber(context, code)) {
+    value += 0.35
+    reasons.push('phone-library:-0.35')
+  }
 
   return { value, reasons }
+}
+
+function isInsideParsedDate(text: string, index: number, code: string): boolean {
+  const windowStart = Math.max(0, index - CONTEXT_RADIUS)
+  const windowText = text.slice(windowStart, Math.min(text.length, index + code.length + CONTEXT_RADIUS))
+  const localIndex = index - windowStart
+  try {
+    return chrono.parse(windowText).some((result) => {
+      const start = result.index
+      const end = result.index + result.text.length
+      const overlaps = localIndex >= start && localIndex <= end
+      if (!overlaps || !result.text.includes(code)) return false
+      return /[-/:年月日号號]|am|pm|mon|tue|wed|thu|fri|sat|sun|jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec/i.test(result.text)
+    })
+  } catch {
+    return false
+  }
+}
+
+function isInsidePhoneNumber(context: string, code: string): boolean {
+  try {
+    return findPhoneNumbersInText(context, 'CN').some((match) => match.number.number.replace(/\D/g, '').includes(code))
+  } catch {
+    return false
+  }
 }
 
 function nearestKeywordDistance(text: string, index: number): number {
