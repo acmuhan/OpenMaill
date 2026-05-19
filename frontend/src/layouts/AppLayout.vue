@@ -35,7 +35,7 @@ function openBackup() {
           <slot />
         </main>
 
-        <footer class="text-center text-xs text-on-surface-variant/60 py-4">
+        <footer class="text-center text-xs text-on-surface-variant/60 py-4 min-h-12">
           OpenMail · A Mail Manger Tools
         </footer>
       </div>

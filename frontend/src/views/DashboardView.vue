@@ -2,6 +2,7 @@
 import { computed } from 'vue'
 import { BaseCard, BaseButton, BaseChip, BaseIcon } from '@/components/ui'
 import WorkflowToolbar from '@/components/modules/workflow/WorkflowToolbar.vue'
+import ProtocolHistory from '@/components/modules/history/ProtocolHistory.vue'
 import { navigate } from '@/stores/ui.store'
 import { activeAccount, activeMail, mailInstances, accountInstances } from '@/stores/providers.store'
 import { emails, tokenState } from '@/stores/mail.store'
@@ -93,4 +94,6 @@ const availableTools = computed(() => {
       </button>
     </div>
   </BaseCard>
+
+  <ProtocolHistory />
 </template>

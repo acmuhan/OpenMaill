@@ -1,4 +1,5 @@
 import { api } from '@/api'
+import { addActivityHistory } from '@/stores/history.store'
 import { setInstanceState } from '@/stores/providers.store'
 import type { ToolInstance } from '@/tools'
 import { getTool } from '@/tools'
@@ -36,6 +37,13 @@ export const accountService = {
     const r = await api.balance(guard.cfg, inst.toolId)
     if (r.ok) {
       setInstanceState(inst.id, { balance: r.balance, lastUsedAt: Date.now() })
+      addActivityHistory({
+        toolId: inst.toolId,
+        instanceId: inst.id,
+        instanceName: inst.name,
+        action: '查询余额',
+        summary: `${inst.name} 余额：${r.balance}`,
+      })
       return { ok: true as const, balance: r.balance }
     }
     setInstanceState(inst.id, { lastError: r.error })
@@ -48,6 +56,14 @@ export const accountService = {
     const r = await api.accounts(guard.cfg, type, quantity, inst.toolId)
     if (r.ok) {
       setInstanceState(inst.id, { lastUsedAt: Date.now() })
+      addActivityHistory({
+        toolId: inst.toolId,
+        instanceId: inst.id,
+        instanceName: inst.name,
+        action: '获取账号',
+        summary: `${type} · ${r.accounts.length} 个账号`,
+        detail: `请求数量：${quantity}`,
+      })
       return { ok: true as const, accounts: r.accounts }
     }
     return { ok: false as const, error: r.error || '获取账号失败' }
@@ -59,6 +75,14 @@ export const accountService = {
     const r = await api.history(guard.cfg, type, inst.toolId)
     if (r.ok) {
       setInstanceState(inst.id, { lastUsedAt: Date.now() })
+      addActivityHistory({
+        toolId: inst.toolId,
+        instanceId: inst.id,
+        instanceName: inst.name,
+        action: '查询历史',
+        summary: `${type} 历史记录已返回`,
+        detail: `响应长度：${r.data.length} 字符`,
+      })
       return { ok: true as const, raw: r.data }
     }
     return { ok: false as const, error: r.error || '查询失败' }

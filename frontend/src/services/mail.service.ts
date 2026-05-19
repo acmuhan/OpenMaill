@@ -1,4 +1,5 @@
 import { api } from '@/api'
+import { addActivityHistory } from '@/stores/history.store'
 import { accessToken, currentMail, currentMailbox, currentMailId, emails, prefs, tokenState } from '@/stores/mail.store'
 import type { ToolInstance } from '@/tools'
 import { getTool } from '@/tools'
@@ -29,6 +30,14 @@ export const mailService = {
       accessToken.value = r.access_token
       currentMailbox.value = String(cfg.email || '')
       tokenState.value = 'ready'
+      addActivityHistory({
+        toolId: mailInst.toolId,
+        instanceId: mailInst.id,
+        instanceName: mailInst.name,
+        action: '获取 Token',
+        summary: `${mailInst.name} · ${currentMailbox.value || '未命名邮箱'}`,
+        detail: r.expires_in ? `有效期：${r.expires_in} 秒` : undefined,
+      })
       return { ok: true as const, access_token: r.access_token }
     }
     accessToken.value = ''
@@ -52,6 +61,14 @@ export const mailService = {
     })
     if (r.ok) {
       emails.value = r.emails
+      addActivityHistory({
+        toolId: mailInst.toolId,
+        instanceId: mailInst.id,
+        instanceName: mailInst.name,
+        action: '读取邮件',
+        summary: `${String(cfg.email || currentMailbox.value || '邮箱')} · ${r.emails.length} 封`,
+        detail: `${prefs.value.folder} · 最近 ${prefs.value.limit} 封`,
+      })
       return { ok: true as const, emails: r.emails }
     }
     return { ok: false as const, error: r.error || '读取邮件失败' }
@@ -73,6 +90,14 @@ export const mailService = {
     })
     if (r.ok) {
       currentMail.value = { subject: r.subject, from: r.from, date: r.date, body: r.body }
+      addActivityHistory({
+        toolId: mailInst.toolId,
+        instanceId: mailInst.id,
+        instanceName: mailInst.name,
+        action: '打开正文',
+        summary: r.subject || '(无主题)',
+        detail: r.from ? `发件人：${r.from}` : undefined,
+      })
       return { ok: true as const, mail: r }
     }
     return { ok: false as const, error: r.error || '加载正文失败' }

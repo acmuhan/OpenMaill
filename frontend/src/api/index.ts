@@ -42,7 +42,25 @@ async function postJson<T>(url: string, body: Record<string, unknown>): Promise<
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(body),
   })
-  return (await response.json()) as T & { ok: boolean; error?: string }
+  const raw = await response.text()
+  const contentType = response.headers.get('content-type') || ''
+  if (!raw) return { ok: false, error: `请求失败：HTTP ${response.status}` } as T & { ok: boolean; error?: string }
+
+  if (!contentType.includes('application/json')) {
+    return {
+      ok: false,
+      error: `接口返回了非 JSON 响应：HTTP ${response.status}`,
+    } as T & { ok: boolean; error?: string }
+  }
+
+  try {
+    return JSON.parse(raw) as T & { ok: boolean; error?: string }
+  } catch {
+    return {
+      ok: false,
+      error: `JSON 解析失败：HTTP ${response.status}`,
+    } as T & { ok: boolean; error?: string }
+  }
 }
 
 export const api = {

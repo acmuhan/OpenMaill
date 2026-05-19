@@ -3,7 +3,7 @@ import { computed, ref, watch } from 'vue'
 import { BaseCard, BaseButton, BaseChip, BaseSwitch, BaseEmpty, BaseTabs } from '@/components/ui'
 import { currentMail, currentMailId, prefs } from '@/stores/mail.store'
 import { extractOtp, extractLinks, looksLikeHtml, stripHtml, sanitizeHtml, shouldRunSemanticOtp, type OtpHit } from '@/services/mail-body.service'
-import { extractOtpWithSemanticFallback, preloadOtpSemanticModel, type OtpAiStatus } from '@/services/otp-ai.service'
+import { extractOtpWithSemanticFallback, type OtpAiStatus } from '@/services/otp-ai.service'
 import { useToast } from '@/stores/toast.store'
 
 const toast = useToast()
@@ -97,10 +97,6 @@ watch(
   },
   { immediate: true },
 )
-
-if ('requestIdleCallback' in window) {
-  window.requestIdleCallback(() => preloadOtpSemanticModel().catch(() => {}), { timeout: 5000 })
-}
 
 async function copyText(text: string, hint = '已复制') {
   try {

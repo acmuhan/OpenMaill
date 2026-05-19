@@ -57,8 +57,8 @@ async function refreshBalance() {
 </script>
 
 <template>
-  <header class="rounded-md bg-surface-container-lowest/85 backdrop-blur-md shadow-[0_8px_32px_rgba(15,23,42,0.06)] px-5 py-4 sm:px-6 sm:py-5">
-    <div class="flex items-center justify-between gap-4 flex-wrap">
+  <header class="rounded-md bg-surface-container-lowest/85 backdrop-blur-md shadow-[0_8px_32px_rgba(15,23,42,0.06)] px-5 py-4 sm:px-6 sm:py-5 min-h-[112px] sm:min-h-[96px]">
+    <div class="flex items-start sm:items-center justify-between gap-4 flex-wrap">
       <div class="flex flex-col gap-1 min-w-0">
         <h1 class="text-xl sm:text-2xl font-bold tracking-tight text-on-surface leading-tight truncate">
           {{ titles[route] }}
@@ -66,7 +66,7 @@ async function refreshBalance() {
         <p class="text-xs sm:text-sm text-on-surface-variant/80 truncate">{{ subtitles[route] }}</p>
       </div>
 
-      <div class="flex items-center gap-2 flex-wrap">
+      <div class="flex items-center gap-2 flex-wrap min-h-9">
         <BaseChip variant="info" size="sm">
           余额 <strong class="ml-1 font-semibold">{{ balanceText }}</strong>
         </BaseChip>
